@@ -62,13 +62,10 @@ class Proxy(DatagramProtocol):
         nowtime = time()
         
         Debug = self.debug
-        print(host)
-        print(self.master)
         
         #If the packet comes from the master
         if host == self.master:
             _command = data[:4]
-            print(data)
             
             if _command == DMRD:
                 _peer_id = data[11:15]
