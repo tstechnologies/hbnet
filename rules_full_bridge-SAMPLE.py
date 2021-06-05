@@ -32,7 +32,7 @@ configuration file.
         triggering. If you are not, there is NO NEED to use this feature.
 '''
 
-BRIDGES = {
+BRIDGES_TEMPLATE = {
     'STATEWIDE': [
             {'SYSTEM': 'MASTER-1',    'TS': 2, 'TGID': 3129, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'NONE', 'ON': [4,], 'OFF': [7,10], 'RESET': []},
             {'SYSTEM': 'PEER-2',    'TS': 2, 'TGID': 3129, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'NONE', 'ON': [4,], 'OFF': [7,10], 'RESET': []},
@@ -40,6 +40,7 @@ BRIDGES = {
     'ECHO': [
             {'SYSTEM': 'MASTER-1',    'TS': 2, 'TGID': 9999,    'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'ON',  'ON': [9999,], 'OFF': [9,10], 'RESET': []},
             {'SYSTEM': 'PEER-1',    'TS': 2, 'TGID': 9999, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'ON',  'ON': [9999,], 'OFF': [9,10], 'RESET': []},
+            {'SYSTEM': 'PROXY_A',    'TS': 2, 'TGID': 9, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'NONE', 'ON': [4], 'OFF': [7,10], 'RESET': []},
         ]
 }
 
@@ -47,7 +48,6 @@ BRIDGES = {
 list the names of each system that should NOT be bridged unit to unit (individual) calls.
 '''
 
-#UNIT = ['MASTER-1', 'PEER-1']
 EXCLUDE_FROM_UNIT = ['OBP-1', 'PEER-1']
 
 '''
@@ -123,7 +123,40 @@ local_systems = {
 
 
 
+#################### Function used to build bridges for PROXY stanzas, leave alone ####################
+def build_bridges():
+    import sms_aprs_config
+    config_file = './gps_data.cfg'
+    CONFIG = sms_aprs_config.build_config(config_file)
+##    print(CONFIG)
+    built_bridge = BRIDGES_TEMPLATE.copy()
+    if CONFIG['PROXY_A']['ENABLED']:
+        proxy_a_masters = []
+        n_systems = CONFIG['PROXY_A']['INTERNAL_PORT_STOP'] - CONFIG['PROXY_A']['INTERNAL_PORT_START']
+        n_count = 0
+        while n_count < n_systems:
+            proxy_a_masters.append(CONFIG['PROXY_A']['NAME'] + '-' + str(n_count))
+            n_count = n_count + 1
+        
+    for b in BRIDGES_TEMPLATE:
+            for s in BRIDGES_TEMPLATE[b]:
+                if s['SYSTEM'] == 'PROXY_A':
+                   for m in proxy_a_masters:
+                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+                   built_bridge[b].remove(s)
+                if s['SYSTEM'] == 'PROXY_B':
+                   for m in proxy_b_masters:
+                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+                   built_bridge[b].remove(s)
+                if s['SYSTEM'] == 'PROXY_C':
+                   for m in proxy_c_masters:
+                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+                   built_bridge[b].remove(s)
+    
+    return built_bridge
 
+BRIDGES = build_bridges()
+############################################################################################################33
 
 '''
 This is for testing the syntax of the file. It won't eliminate all errors, but running this file
@@ -133,5 +166,4 @@ like it were a Python program itself will tell you if the syntax is correct!
 if __name__ == '__main__':
     from pprint import pprint
     pprint(BRIDGES)
-    print(UNIT)
-    print(STATIC_UNIT)
+    pprint(EXCLUDE_FROM_UNIT)

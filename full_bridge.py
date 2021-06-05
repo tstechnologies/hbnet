@@ -118,7 +118,7 @@ __maintainer__ = 'Eric Craw, KF7EEL'
 __email__      = 'kf7eel@qsl.net'
 
 # Module gobal varaibles
-
+BRIDGES = {}
 #### from gps_data.py ###
 ##################################################################################################
 
@@ -1175,30 +1175,31 @@ def config_reports(_config, _factory):
 # configuration file and listed as "active". It can be empty,
 # but it has to exist.
 def make_bridges(_rules):
-    global proxy_a_masters
     # Convert integer GROUP ID numbers from the config into hex strings
     # we need to send in the actual data packets.
     for _bridge in _rules:
         for _system in _rules[_bridge]:
-            if _system['SYSTEM'] not in CONFIG['SYSTEMS'] and 'PROXY_' not in _system['SYSTEM']:
+            if _system['SYSTEM'] not in CONFIG['SYSTEMS']:
                 sys.exit('ERROR: Conference bridge "{}" references a system named "{}" that is not enabled in the main configuration'.format(_bridge, _system['SYSTEM']))
-            elif 'PROXY_' in _system['SYSTEM']:
-                pass                    
-            else:
-                print(_system['SYSTEM'])
-                _system['TGID']       = bytes_3(_system['TGID'])
-                for i, e in enumerate(_system['ON']):
-                    print((i))
-                    print((e))
+
+            _system['TGID']       = bytes_3(_system['TGID'])
+            for i, e in enumerate(_system['ON']):
+            # If _system['ON'][i] or _system['OFF'][i] bytes, convert to int
+                 try:
                     _system['ON'][i]  = bytes_3(_system['ON'][i])
-                for i, e in enumerate(_system['OFF']):
+                 except:
+                    _system['ON'][i]  = bytes_3(int.from_bytes(_system['ON'][i], "big"))
+            for i, e in enumerate(_system['OFF']):
+                try:
                     _system['OFF'][i] = bytes_3(_system['OFF'][i])
-                _system['TIMEOUT']    = _system['TIMEOUT']*60
-                if _system['ACTIVE'] == True:
-                    _system['TIMER']  = time() + _system['TIMEOUT']
-                else:
-                    _system['TIMER']  = time()
-    #print(_rules)
+                except:
+                    _system['OFF'][i]  = bytes_3(int.from_bytes(_system['OFF'][i], "big"))
+                
+            _system['TIMEOUT']    = _system['TIMEOUT']*60
+            if _system['ACTIVE'] == True:
+                _system['TIMER']  = time() + _system['TIMEOUT']
+            else:
+                _system['TIMER']  = time()
     return _rules
 
 
@@ -2718,7 +2719,6 @@ class bridgeReportFactory(reportFactory):
 #************************************************
 
 if __name__ == '__main__':
-    #global BRIDGES
     import argparse
     import sys
     import os
@@ -2865,13 +2865,14 @@ if __name__ == '__main__':
         logger.info('(ROUTER) Routing bridges file found and bridges imported: %s', cli_args.RULES_FILE)
     except (ImportError, FileNotFoundError):
         sys.exit('(ROUTER) TERMINATING: Routing bridges file not found or invalid: {}'.format(cli_args.RULES_FILE))
-        
+
     # INITIALIZE THE REPORTING LOOP
     if CONFIG['REPORTS']['REPORT']:
         report_server = config_reports(CONFIG, bridgeReportFactory)
     else:
         report_server = None
         logger.info('(REPORT) TCP Socket reporting not configured')
+
     # HBlink instance creation
     logger.info('(GLOBAL) HBlink \'bridge.py\' -- SYSTEM STARTING...')
 
@@ -2902,7 +2903,6 @@ if __name__ == '__main__':
             }})
             CONFIG['SYSTEMS'][CONFIG['PROXY_A']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
             systems[CONFIG['PROXY_A']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_A']['NAME'] + '-' + str(n_count), CONFIG, report_server)
-            proxy_a_masters.append(CONFIG['PROXY_A']['NAME'] + '-' + str(n_count))
             n_count = n_count + 1
             
     if CONFIG['PROXY_B']['ENABLED']:
@@ -2929,7 +2929,6 @@ if __name__ == '__main__':
             }})
             CONFIG['SYSTEMS'][CONFIG['PROXY_B']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
             systems[CONFIG['PROXY_B']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_B']['NAME'] + '-' + str(n_count), CONFIG, report_server)
-            proxy_b_masters.append(CONFIG['PROXY_B']['NAME'] + '-' + str(n_count))
             n_count = n_count + 1
     if CONFIG['PROXY_C']['ENABLED']:
         #generate_proxy_masters()
@@ -2955,9 +2954,33 @@ if __name__ == '__main__':
             }})
             CONFIG['SYSTEMS'][CONFIG['PROXY_C']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
             systems[CONFIG['PROXY_C']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_C']['NAME'] + '-' + str(n_count), CONFIG, report_server)
-            proxy_c_masters.append(CONFIG['PROXY_c']['NAME'] + '-' + str(n_count))
             n_count = n_count + 1
             
+    # Build the routing rules file
+##    rule_bridge = rules_module.BRIDGES_TEMPLATE
+##    bridge_dict = rule_bridge.copy()
+##    for b in bridge_dict:
+##            for s in bridge_dict[b]:
+####                print(s)
+##                if s['SYSTEM'] == 'PROXY_A':
+##                   for m in proxy_a_masters:
+##                       print(m)
+##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+##                   bridge_dict[b].remove(s)
+####                   print(bridge_dict)
+##                if s['SYSTEM'] == 'PROXY_B':
+##                   for m in proxy_b_masters:
+##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
+##                  # bridge_dict[b].remove(s)
+##                if s['SYSTEM'] == 'PROXY_C':
+##                   for m in proxy_c_masters:
+##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
+####    print(bridge_dict)
+##
+####    print(rule_bridge)
+    BRIDGES = make_bridges(rules_module.BRIDGES)
+    exclude = rules_module.EXCLUDE_FROM_UNIT
+    
     for system in CONFIG['SYSTEMS']:
         if CONFIG['SYSTEMS'][system]['ENABLED']:
             if CONFIG['SYSTEMS'][system]['MODE'] == 'OPENBRIDGE':
@@ -2973,34 +2996,7 @@ if __name__ == '__main__':
         logger.error('(GLOBAL) STOPPING REACTOR TO AVOID MEMORY LEAK: Unhandled error in timed loop.\n %s', failure)
         reactor.stop()
 
-        # Build the routing rules file
-    bridge_dict = rules_module.BRIDGES
-    print(bridge_dict)
-    for b in bridge_dict:
-            for s in bridge_dict[b]:
-                if s['SYSTEM'] == 'PROXY_A':
-                   for m in proxy_a_masters:
-                       print(type(s['ON']))
-                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                  # bridge_dict[b].remove(s)
-                if s['SYSTEM'] == 'PROXY_B':
-                   for m in proxy_b_masters:
-                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                  # bridge_dict[b].remove(s)
-                if s['SYSTEM'] == 'PROXY_C':
-                   for m in proxy_c_masters:
-                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                  # bridge_dict[b].remove(s)
-    
-    BRIDGES = make_bridges(bridge_dict)
-
-    print(bridge_dict)
-    print()
-    print(BRIDGES)
-
-    exclude = rules_module.EXCLUDE_FROM_UNIT
-
-       
+        
     # Get rule parameter for private calls
     #UNIT = rules_module.UNIT
     UNIT = build_unit(CONFIG)
@@ -3045,5 +3041,5 @@ if __name__ == '__main__':
             proxy_thread.start()
         
     logger.info('Unit calls will be bridged to: ' + str(UNIT))
-   # print(BRIDGES)
+    print(BRIDGES)
     reactor.run()
