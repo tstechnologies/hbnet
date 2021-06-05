@@ -2885,7 +2885,7 @@ if __name__ == '__main__':
                 proxy_master_list.append(i)
     # Start proxy as a thread (if enabled in config) for each set of MASTERs
     for m in proxy_master_list:
-        if CONFIG['SYSTEMS'][m]['EXTERNAL_PROXY_SCRIPT'] == True:
+        if CONFIG['SYSTEMS'][m]['EXTERNAL_PROXY_SCRIPT'] == False:
             proxy_thread = threading.Thread(target=hotspot_proxy, args=(CONFIG['SYSTEMS'][m]['EXTERNAL_PORT'],CONFIG['SYSTEMS'][m]['INTERNAL_PORT_START'],CONFIG['SYSTEMS'][m]['INTERNAL_PORT_STOP'],))
             proxy_thread.daemon = True
             proxy_thread.start()

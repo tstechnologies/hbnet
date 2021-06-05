@@ -135,22 +135,22 @@ def build_bridges():
     proxy_list = []
     unique = str('_' + str(random.randint(100, 999)))
     for i in CONFIG['SYSTEMS']:
+        print(CONFIG['SYSTEMS'][i])
         if CONFIG['SYSTEMS'][i]['ENABLED'] == True:
             if CONFIG['SYSTEMS'][i]['MODE'] == 'PROXY':
                 proxy_list.append(i + unique)
-     
-    for b in BRIDGES_TEMPLATE:
-            for s in BRIDGES_TEMPLATE[b]:
-                if s['SYSTEM'] + unique in proxy_list:
-                    n_systems = CONFIG['SYSTEMS'][i]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START']
-                    n_count = 0
-                    while n_count < n_systems:
-                       built_bridge[b].append({'SYSTEM': s['SYSTEM'] + '-' + str(n_count), 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                       n_count = n_count + 1
-                    built_bridge[b].remove(s)
+    for p in  proxy_list:
+        for b in BRIDGES_TEMPLATE:
+                for s in BRIDGES_TEMPLATE[b]:
+                    print(s)
+                    if s['SYSTEM'] + unique in proxy_list:
+                        n_systems = CONFIG['SYSTEMS'][i]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START']
+                        n_count = 0
+                        while n_count < n_systems:
+                           built_bridge[b].append({'SYSTEM': s['SYSTEM'] + '-' + str(n_count), 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+                           n_count = n_count + 1
+                        built_bridge[b].remove(s)
     return built_bridge
-
-BRIDGES = build_bridges()
 ############################################################################################################33
 
 '''
