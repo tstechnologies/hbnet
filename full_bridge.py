@@ -3,6 +3,7 @@
 ###############################################################################
 #   Copyright (C) 2016-2019 Cortney T. Buffington, N0MJS <n0mjs@me.com>
 #   GPS/Data - Copyright (C) 2021 Eric Craw, KF7EEL <kf7eel@qsl.net>
+#   hotspot_proxy() -  Copyright (C) 2020 Simon Adlem, G7RZU <g7rzu@gb7fr.org.uk>  
 #   Annotated modifications Copyright (C) 2021 Xavier FRS2013
 #   Static position by IU7IGU
 #
@@ -981,7 +982,7 @@ def hotspot_proxy(listen_port, port_start, port_stop):
     reactor.listenUDP(ListenPort,Proxy(Master,ListenPort,CONNTRACK,BlackList,Timeout,Debug,DestportStart,DestPortEnd))
 
     def loopingErrHandle(failure):
-        print('(GLOBAL) STOPPING REACTOR TO AVOID MEMORY LEAK: Unhandled error innowtimed loop.\n {}'.format(failure))
+        logger.error('(GLOBAL) STOPPING REACTOR TO AVOID MEMORY LEAK: Unhandled error innowtimed loop.\n {}'.format(failure))
         reactor.stop()
         
     def stats():        
@@ -2874,110 +2875,51 @@ if __name__ == '__main__':
         logger.info('(REPORT) TCP Socket reporting not configured')
 
     # HBlink instance creation
-    logger.info('(GLOBAL) HBlink \'bridge.py\' -- SYSTEM STARTING...')
-
-    proxy_a_masters = []
-    proxy_b_masters = []
-    proxy_c_masters = []
-    if CONFIG['PROXY_A']['ENABLED']:
-        #generate_proxy_masters()
-        n_systems = CONFIG['PROXY_A']['INTERNAL_PORT_STOP'] - CONFIG['PROXY_A']['INTERNAL_PORT_START']
+    logger.info('(GLOBAL) HBlink3 Extended \'full_bridge.py\' -- SYSTEM STARTING...')
+    
+    # Generate list of Enabled MODE:PROXY masters
+    proxy_master_list = []
+    for i in CONFIG['SYSTEMS']:
+        if CONFIG['SYSTEMS'][i]['ENABLED'] == True:
+            if CONFIG['SYSTEMS'][i]['MODE'] == 'PROXY':
+                proxy_master_list.append(i)
+    # Start proxy as a thread (if enabled in config) for each set of MASTERs
+    for m in proxy_master_list:
+        if CONFIG['SYSTEMS'][m]['EXTERNAL_PROXY_SCRIPT'] == True:
+            proxy_thread = threading.Thread(target=hotspot_proxy, args=(CONFIG['SYSTEMS'][m]['EXTERNAL_PORT'],CONFIG['SYSTEMS'][m]['INTERNAL_PORT_START'],CONFIG['SYSTEMS'][m]['INTERNAL_PORT_STOP'],))
+            proxy_thread.daemon = True
+            proxy_thread.start()
+            logger.info('Started thread for PROXY for MASTER set: ' + m)
+                
+    #Build Master configs from list
+    for i in proxy_master_list:
+        n_systems = CONFIG['SYSTEMS'][i]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START']
         n_count = 0
         while n_count < n_systems:
-
-            CONFIG['SYSTEMS'].update({CONFIG['PROXY_A']['NAME'] + '-' + str(n_count): {
+            CONFIG['SYSTEMS'].update({i + '-' + str(n_count): {
             'MODE': 'MASTER',
             'ENABLED': True,
-            'STATIC_APRS_POSITION_ENABLED': CONFIG['PROXY_A']['STATIC_APRS_POSITION_ENABLED'],
-            'REPEAT': CONFIG['PROXY_A']['REPEAT'],
+            'STATIC_APRS_POSITION_ENABLED': CONFIG['SYSTEMS'][i]['STATIC_APRS_POSITION_ENABLED'],
+            'REPEAT': CONFIG['SYSTEMS'][i]['REPEAT'],
             'MAX_PEERS': 1,
             'IP': '127.0.0.1',
-            'PORT': CONFIG['PROXY_A']['INTERNAL_PORT_START'] + n_count,
-            'PASSPHRASE': CONFIG['PROXY_A']['PASSPHRASE'],
-            'GROUP_HANGTIME': CONFIG['PROXY_A']['GROUP_HANGTIME'],
-            'USE_ACL': CONFIG['PROXY_A']['USE_ACL'],
-            'REG_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_A']['REG_ACL'], 4294967295),
-            'SUB_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_A']['SUB_ACL'], 4294967295),
-            'TGID_TS1_ACL': CONFIG['PROXY_A']['TGID_TS1_ACL'],
-            'TGID_TS2_ACL': CONFIG['PROXY_A']['TGID_TS2_ACL']
+            'PORT': CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START'] + n_count,
+            'PASSPHRASE': CONFIG['SYSTEMS'][i]['PASSPHRASE'],
+            'GROUP_HANGTIME': CONFIG['SYSTEMS'][i]['GROUP_HANGTIME'],
+            'USE_ACL': CONFIG['SYSTEMS'][i]['USE_ACL'],
+            'REG_ACL': CONFIG['SYSTEMS'][i]['REG_ACL'],
+            'SUB_ACL': CONFIG['SYSTEMS'][i]['SUB_ACL'],
+            'TGID_TS1_ACL': CONFIG['SYSTEMS'][i]['TG1_ACL'],
+            'TGID_TS2_ACL': CONFIG['SYSTEMS'][i]['TG2_ACL']
             }})
-            CONFIG['SYSTEMS'][CONFIG['PROXY_A']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
-            systems[CONFIG['PROXY_A']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_A']['NAME'] + '-' + str(n_count), CONFIG, report_server)
+            CONFIG['SYSTEMS'][i + '-' + str(n_count)].update({'PEERS': {}})
+            systems[i + '-' + str(n_count)] = routerHBP(i + '-' + str(n_count), CONFIG, report_server)
             n_count = n_count + 1
-            
-    if CONFIG['PROXY_B']['ENABLED']:
-        #generate_proxy_masters()
-        n_systems = CONFIG['PROXY_B']['INTERNAL_PORT_STOP'] - CONFIG['PROXY_B']['INTERNAL_PORT_START']
-        n_count = 0
-        while n_count < n_systems:
+        # Remove original MASTER stanza to prevent errors
+        CONFIG['SYSTEMS'].pop(i)
+        logger.info('Generated MASTER instances for proxy set: ' + i)
 
-            CONFIG['SYSTEMS'].update({CONFIG['PROXY_B']['NAME'] + '-' + str(n_count): {
-            'MODE': 'MASTER',
-            'ENABLED': True,
-            'STATIC_APRS_POSITION_ENABLED': CONFIG['PROXY_B']['STATIC_APRS_POSITION_ENABLED'],
-            'REPEAT': CONFIG['PROXY_B']['REPEAT'],
-            'MAX_PEERS': 1,
-            'IP': '127.0.0.1',
-            'PORT': CONFIG['PROXY_B']['INTERNAL_PORT_START'] + n_count,
-            'PASSPHRASE': CONFIG['PROXY_B']['PASSPHRASE'],
-            'GROUP_HANGTIME': CONFIG['PROXY_B']['GROUP_HANGTIME'],
-            'USE_ACL': CONFIG['PROXY_B']['USE_ACL'],
-            'REG_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_B']['REG_ACL'], 4294967295),
-            'SUB_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_B']['SUB_ACL'], 4294967295),
-            'TGID_TS1_ACL': CONFIG['PROXY_B']['TGID_TS1_ACL'],
-            'TGID_TS2_ACL': CONFIG['PROXY_B']['TGID_TS2_ACL']
-            }})
-            CONFIG['SYSTEMS'][CONFIG['PROXY_B']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
-            systems[CONFIG['PROXY_B']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_B']['NAME'] + '-' + str(n_count), CONFIG, report_server)
-            n_count = n_count + 1
-    if CONFIG['PROXY_C']['ENABLED']:
-        #generate_proxy_masters()
-        n_systems = CONFIG['PROXY_C']['INTERNAL_PORT_STOP'] - CONFIG['PROXY_C']['INTERNAL_PORT_START']
-        n_count = 0
-        while n_count < n_systems:
 
-            CONFIG['SYSTEMS'].update({CONFIG['PROXY_C']['NAME'] + '-' + str(n_count): {
-            'MODE': 'MASTER',
-            'ENABLED': True,
-            'STATIC_APRS_POSITION_ENABLED': CONFIG['PROXY_C']['STATIC_APRS_POSITION_ENABLED'],
-            'REPEAT': CONFIG['PROXY_C']['REPEAT'],
-            'MAX_PEERS': 1,
-            'IP': '127.0.0.1',
-            'PORT': CONFIG['PROXY_C']['INTERNAL_PORT_START'] + n_count,
-            'PASSPHRASE': CONFIG['PROXY_C']['PASSPHRASE'],
-            'GROUP_HANGTIME': CONFIG['PROXY_C']['GROUP_HANGTIME'],
-            'USE_ACL': CONFIG['PROXY_C']['USE_ACL'],
-            'REG_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_C']['REG_ACL'], 4294967295),
-            'SUB_ACL': sms_aprs_config.acl_build(CONFIG['PROXY_C']['SUB_ACL'], 4294967295),
-            'TGID_TS1_ACL': CONFIG['PROXY_C']['TGID_TS1_ACL'],
-            'TGID_TS2_ACL': CONFIG['PROXY_C']['TGID_TS2_ACL']
-            }})
-            CONFIG['SYSTEMS'][CONFIG['PROXY_C']['NAME'] + '-' + str(n_count)].update({'PEERS': {}})
-            systems[CONFIG['PROXY_C']['NAME'] + '-' + str(n_count)] = routerHBP(CONFIG['PROXY_C']['NAME'] + '-' + str(n_count), CONFIG, report_server)
-            n_count = n_count + 1
-            
-    # Build the routing rules file
-##    rule_bridge = rules_module.BRIDGES_TEMPLATE
-##    bridge_dict = rule_bridge.copy()
-##    for b in bridge_dict:
-##            for s in bridge_dict[b]:
-####                print(s)
-##                if s['SYSTEM'] == 'PROXY_A':
-##                   for m in proxy_a_masters:
-##                       print(m)
-##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
-##                   bridge_dict[b].remove(s)
-####                   print(bridge_dict)
-##                if s['SYSTEM'] == 'PROXY_B':
-##                   for m in proxy_b_masters:
-##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
-##                  # bridge_dict[b].remove(s)
-##                if s['SYSTEM'] == 'PROXY_C':
-##                   for m in proxy_c_masters:
-##                       bridge_dict[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': [1], 'OFF': s['OFF'], 'RESET': s['RESET']})
-####    print(bridge_dict)
-##
-####    print(rule_bridge)
     BRIDGES = make_bridges(rules_module.BRIDGES)
     exclude = rules_module.EXCLUDE_FROM_UNIT
     
@@ -3021,25 +2963,6 @@ if __name__ == '__main__':
         aprs_thread = threading.Thread(target=aprs_rx, args=(aprs_callsign, aprs_passcode, aprs_server, aprs_port, aprs_filter, user_ssid,))
         aprs_thread.daemon = True
         aprs_thread.start()
-        # Create file for static positions - by IU7IGU
-##        open("nom_aprs","w").close
     
-    if CONFIG['PROXY_A']['ENABLED']:
-        if not CONFIG['PROXY_A']['USE_EXTERNAL_PROXY']:
-            proxy_thread = threading.Thread(target=hotspot_proxy, args=(CONFIG['PROXY_A']['EXTERNAL_PORT'],CONFIG['PROXY_A']['INTERNAL_PORT_START'],CONFIG['PROXY_A']['INTERNAL_PORT_STOP'],))
-            proxy_thread.daemon = True
-            proxy_thread.start()
-    if CONFIG['PROXY_B']['ENABLED']:
-        if not CONFIG['PROXY_B']['USE_EXTERNAL_PROXY']:
-            proxy_thread = threading.Thread(target=hotspot_proxy, args=(CONFIG['PROXY_B']['EXTERNAL_PORT'],CONFIG['PROXY_B']['INTERNAL_PORT_START'],CONFIG['PROXY_B']['INTERNAL_PORT_STOP'],))
-            proxy_thread.daemon = True
-            proxy_thread.start()
-    if CONFIG['PROXY_C']['ENABLED']:
-        if not CONFIG['PROXY_C']['USE_EXTERNAL_PROXY']:
-            proxy_thread = threading.Thread(target=hotspot_proxy, args=(CONFIG['PROXY_C']['EXTERNAL_PORT'],CONFIG['PROXY_C']['INTERNAL_PORT_START'],CONFIG['PROXY_C']['INTERNAL_PORT_STOP'],))
-            proxy_thread.daemon = True
-            proxy_thread.start()
-        
     logger.info('Unit calls will be bridged to: ' + str(UNIT))
-    print(BRIDGES)
     reactor.run()

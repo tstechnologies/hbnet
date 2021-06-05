@@ -31,6 +31,8 @@ configuration file.
         timer to be reset. This is useful   if you are using different TGIDs for voice traffic than
         triggering. If you are not, there is NO NEED to use this feature.
 '''
+# REQUIRED! - Path to your full_bridge.cfg
+config_file = './full_bridge.cfg'
 
 BRIDGES_TEMPLATE = {
     'STATEWIDE': [
@@ -40,7 +42,8 @@ BRIDGES_TEMPLATE = {
     'ECHO': [
             {'SYSTEM': 'MASTER-1',    'TS': 2, 'TGID': 9999,    'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'ON',  'ON': [9999,], 'OFF': [9,10], 'RESET': []},
             {'SYSTEM': 'PEER-1',    'TS': 2, 'TGID': 9999, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'ON',  'ON': [9999,], 'OFF': [9,10], 'RESET': []},
-            {'SYSTEM': 'PROXY_A',    'TS': 2, 'TGID': 9, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'NONE', 'ON': [4], 'OFF': [7,10], 'RESET': []},
+            # For proxy MASTERs, just put in the name of the stanza, and rules will be generated automatically
+            {'SYSTEM': 'HOTSPOT',    'TS': 2, 'TGID': 9, 'ACTIVE': True, 'TIMEOUT': 2, 'TO_TYPE': 'NONE', 'ON': [4], 'OFF': [7,10], 'RESET': []},
         ]
 }
 
@@ -125,34 +128,26 @@ local_systems = {
 
 #################### Function used to build bridges for PROXY stanzas, leave alone ####################
 def build_bridges():
-    import sms_aprs_config
+    import sms_aprs_config, random
     config_file = './gps_data.cfg'
     CONFIG = sms_aprs_config.build_config(config_file)
-##    print(CONFIG)
     built_bridge = BRIDGES_TEMPLATE.copy()
-    if CONFIG['PROXY_A']['ENABLED']:
-        proxy_a_masters = []
-        n_systems = CONFIG['PROXY_A']['INTERNAL_PORT_STOP'] - CONFIG['PROXY_A']['INTERNAL_PORT_START']
-        n_count = 0
-        while n_count < n_systems:
-            proxy_a_masters.append(CONFIG['PROXY_A']['NAME'] + '-' + str(n_count))
-            n_count = n_count + 1
-        
+    proxy_list = []
+    unique = str('_' + str(random.randint(100, 999)))
+    for i in CONFIG['SYSTEMS']:
+        if CONFIG['SYSTEMS'][i]['ENABLED'] == True:
+            if CONFIG['SYSTEMS'][i]['MODE'] == 'PROXY':
+                proxy_list.append(i + unique)
+     
     for b in BRIDGES_TEMPLATE:
             for s in BRIDGES_TEMPLATE[b]:
-                if s['SYSTEM'] == 'PROXY_A':
-                   for m in proxy_a_masters:
-                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                   built_bridge[b].remove(s)
-                if s['SYSTEM'] == 'PROXY_B':
-                   for m in proxy_b_masters:
-                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                   built_bridge[b].remove(s)
-                if s['SYSTEM'] == 'PROXY_C':
-                   for m in proxy_c_masters:
-                       built_bridge[b].append({'SYSTEM': m, 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
-                   built_bridge[b].remove(s)
-    
+                if s['SYSTEM'] + unique in proxy_list:
+                    n_systems = CONFIG['SYSTEMS'][i]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START']
+                    n_count = 0
+                    while n_count < n_systems:
+                       built_bridge[b].append({'SYSTEM': s['SYSTEM'] + '-' + str(n_count), 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
+                       n_count = n_count + 1
+                    built_bridge[b].remove(s)
     return built_bridge
 
 BRIDGES = build_bridges()
