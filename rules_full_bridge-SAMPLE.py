@@ -129,7 +129,6 @@ local_systems = {
 #################### Function used to build bridges for PROXY stanzas, leave alone ####################
 def build_bridges():
     import sms_aprs_config, random
-    config_file = './gps_data.cfg'
     CONFIG = sms_aprs_config.build_config(config_file)
     built_bridge = BRIDGES_TEMPLATE.copy()
     proxy_list = []
@@ -142,9 +141,8 @@ def build_bridges():
     for p in  proxy_list:
         for b in BRIDGES_TEMPLATE:
                 for s in BRIDGES_TEMPLATE[b]:
-                    print(s)
                     if s['SYSTEM'] + unique in proxy_list:
-                        n_systems = CONFIG['SYSTEMS'][i]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][i]['INTERNAL_PORT_START']
+                        n_systems = CONFIG['SYSTEMS'][p[:-4]]]['INTERNAL_PORT_STOP'] - CONFIG['SYSTEMS'][p[:-4]]]['INTERNAL_PORT_START']
                         n_count = 0
                         while n_count < n_systems:
                            built_bridge[b].append({'SYSTEM': s['SYSTEM'] + '-' + str(n_count), 'TS': s['TS'], 'TGID': s['TGID'], 'ACTIVE': s['ACTIVE'], 'TIMEOUT': s['TIMEOUT'], 'TO_TYPE': s['TO_TYPE'], 'ON': s['ON'], 'OFF': s['OFF'], 'RESET': s['RESET']})
