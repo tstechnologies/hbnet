@@ -110,6 +110,8 @@ __license__    = 'GNU GPLv3'
 __maintainer__ = 'Eric Craw, KF7EEL'
 __email__      = 'kf7eel@qsl.net'
 
+sms_seq_num = 0
+
 def download_aprs_settings(_CONFIG):
     user_man_url = _CONFIG['WEB_SERVICE']['URL']
     shared_secret = str(sha256(_CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
@@ -1019,6 +1021,16 @@ def process_sms(_rf_src, sms, call_type, system_name):
 
 ##### SMS encode #########
 ############## SMS Que and functions ###########
+
+def gen_sms_seq():
+    global sms_seq_num
+    if sms_seq_num < 255:
+        sms_seq_num = sms_seq_num + 1
+    if sms_seq_num > 255:
+        sms_seq_num = 1
+##    print(sms_seq_num)
+    return str(hex(sms_seq_num))[2:].zfill(2)
+    
 def create_crc16(fragment_input):
     crc16 = libscrc.gsm16(bytearray.fromhex(fragment_input))
     return fragment_input + re.sub('x', '0', str(hex(crc16 ^ 0xcccc))[-4:])
@@ -1224,7 +1236,8 @@ def sms_headers(to_id, from_id):
 ##    #TTL and Protocol always 4011, no matter what
 ##    ipv4_ttl_proto = '4011'
     #ipv4 = '450000ee000d0000401100000c' + from_id + '0c' + to_id
-    ipv4 = '450000ee00000000401100000c' + from_id + '0c' + to_id
+##    print(gen_sms_seq())
+    ipv4 = '450000ee00' + gen_sms_seq() + '0000401100000c' + from_id + '0c' + to_id
     count_index = 0
     hdr_lst = []
     while count_index < len(ipv4):
@@ -1548,6 +1561,7 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                 final_packet = str(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly)).tobytes().decode('utf-8', 'ignore'))
                 sms_hex = str(ba2hx(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly))))
                 sms_hex_string = re.sub("b'|'", '', str(sms_hex))
+                print(sms_hex_string)
                 #NMEA GPS sentence
                 if '$GPRMC' in final_packet or '$GNRMC' in final_packet:
                     logger.info(final_packet + '\n')

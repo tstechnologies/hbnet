@@ -21,7 +21,7 @@
 Flask based application that is the web server for HBNet. Controls user authentication, DMR server config, etc.
 '''
 
-from flask import Flask, render_template_string, request, make_response, jsonify, render_template, Markup, flash, redirect, url_for, current_app, Response
+from flask import Flask, render_template_string, request, make_response, jsonify, render_template, Markup, flash, redirect, url_for, current_app, Response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, UserManager, UserMixin, user_registered, roles_required
 from werkzeug.security import check_password_hash
@@ -53,11 +53,6 @@ import os, ast
 
 from cryptography.fernet import Fernet
 
-
-
-##script_links = {}
-##active_tgs = {}
-##ping_list = {}
 peer_locations = {}
 
 # Query radioid.net for list of IDs
@@ -778,6 +773,12 @@ def hbnet_web_service():
             
         return dict(global_config={'mode': mode, 'messages': messages_waiting, 'registration_enabled': USER_ENABLE_REGISTER})
 
+
+    # Serve favicon
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
     # The Home page is accessible to anyone
     @app.route('/')

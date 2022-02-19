@@ -516,7 +516,7 @@ def make_bridges(_rules, _web_serv_status):
     return _new_rules
 
 def ten_loop_func():
-    logger.info('10 minute loop')
+    logger.info('10 minute function loop')
     # Download burn list
     if LOCAL_CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED']:
         with open(CONFIG['WEB_SERVICE']['BURN_FILE'], 'w') as f:
@@ -646,17 +646,10 @@ class routerOBP(OPENBRIDGE):
         self._targets = []
 
     def svrd_received(self, _mode, _data):
-        print(UNIT_MAP)
+##        print(UNIT_MAP)
         logger.info('SVRD Received. Mode: ' + str(_mode) + ' Data: ' + str(_data))
         if _mode == b'UNIT':
             UNIT_MAP[_data] = (self._system, time())
-
-##    def mmdvm_cmd(self, _cmd):
-##        print('---')
-##        print(_cmd)
-##        print('---')
-##        pass
-
 
     def group_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _frame_type, _dtype_vseq, _stream_id, _data):
         pkt_time = time()
