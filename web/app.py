@@ -980,44 +980,45 @@ def hbnet_web_service():
         dev_list = []
         f_map = folium.Map(location=center_map, zoom_start=map_zoom)
         peer_l = PeerLoc.query.all()
-        print(peer_l)
-        for i in dev_loc:
-            if i.callsign in dev_list:
-                pass
-            elif i.callsign not in dev_list:
-                dev_list.append(i.callsign)
-                lat = i.lat
-                lon = i.lon
-                if 'S' in i.lat:
-                    lat = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lat)))
-                    lat = -lat
-                if 'S' not in i.lat:
-                    lat = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lat)))
-                if 'W' in i.lon:
-                    lon = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lon)))
-                    lon = -lon
-                if 'W' not in i.lon:
-                    lon = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lon)))
-                folium.Marker([lat, lon], popup="""<i>
-                    <table style="width: 150px;">
-                    <tbody>
-                    <tr>
-                    <td style="text-align: center;">Last Location:</td>
-                    </tr>
-                    <tr>
-                    <td style="text-align: center;"><strong><a href="/map_gps/"""+ str(i.callsign) +"""" target="_blank" rel="noopener">"""+ str(i.callsign) +"""</a></strong></td>
-                    </tr>
-                    <tr>
-                    <td style="text-align: center;"><strong>"""+ str(i.comment) +"""</strong></td>
-                    </tr>
-                    <tr>
-                    <td style="text-align: center;"><em>"""+ str((i.time + timedelta(hours=hbnet_tz)).strftime(time_format)) + """</em></td>
-                    </tr>
-                    </tbody>
-                    </table>
-                    </i>
-                    """, icon=folium.Icon(color="blue", icon="record"), tooltip='<strong>' + i.callsign + '</strong>').add_to(f_map)
-        if mode == 'FULL':            
+##        print(peer_l)
+        if mode == 'FULL' or mode == 'DASH_ONLY':
+            for i in dev_loc:
+                if i.callsign in dev_list:
+                    pass
+                elif i.callsign not in dev_list:
+                    dev_list.append(i.callsign)
+                    lat = i.lat
+                    lon = i.lon
+                    if 'S' in i.lat:
+                        lat = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lat)))
+                        lat = -lat
+                    if 'S' not in i.lat:
+                        lat = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lat)))
+                    if 'W' in i.lon:
+                        lon = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lon)))
+                        lon = -lon
+                    if 'W' not in i.lon:
+                        lon = aprs_to_latlon(float(re.sub('[A-Za-z]','', i.lon)))
+                    folium.Marker([lat, lon], popup="""<i>
+                        <table style="width: 150px;">
+                        <tbody>
+                        <tr>
+                        <td style="text-align: center;">Last Location:</td>
+                        </tr>
+                        <tr>
+                        <td style="text-align: center;"><strong><a href="/map_gps/"""+ str(i.callsign) +"""" target="_blank" rel="noopener">"""+ str(i.callsign) +"""</a></strong></td>
+                        </tr>
+                        <tr>
+                        <td style="text-align: center;"><strong>"""+ str(i.comment) +"""</strong></td>
+                        </tr>
+                        <tr>
+                        <td style="text-align: center;"><em>"""+ str((i.time + timedelta(hours=hbnet_tz)).strftime(time_format)) + """</em></td>
+                        </tr>
+                        </tbody>
+                        </table>
+                        </i>
+                        """, icon=folium.Icon(color="blue", icon="record"), tooltip='<strong>' + i.callsign + '</strong>').add_to(f_map)
+        if mode == 'FULL' or mode == 'DMR_ONLY':            
             for l in peer_l:
     ##            print(time.time() - l.time().total_seconds() > 3600 )
     ##            print(datetime.datetime.now() - timedelta(days = 2))

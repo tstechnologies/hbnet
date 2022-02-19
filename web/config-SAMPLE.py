@@ -30,6 +30,8 @@ secret_key = '123456789123456789123456789123456789123456789'
 # Options are:
 # FULL - Normal HBNet web service
 # DASH_ONLY - To be used with FreeDMR or HBLink
+# DMR_ONLY - Hides all SMS/GPS stuff
+
 mode = 'FULL'
 
 # Timezone to show time stamps in. Stored in DB as UTC. Offset in hours.
