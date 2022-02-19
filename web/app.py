@@ -622,7 +622,8 @@ def hbnet_web_service():
             initial_admin_approved = True,
             notes='Default admin account created during installation.',
             dmr_ids='{}',
-            aprs = '{}'
+            aprs = '{}',
+            api_keys = str('[' + str(Fernet.generate_key())[2:-1] + ']')
         )
         user.roles.append(Role(name='Admin'))
         user.roles.append(Role(name='User'))
@@ -692,6 +693,7 @@ def hbnet_web_service():
         edit_user.first_name = str(radioid_data[1])
         edit_user.last_name = str(radioid_data[2])
         edit_user.city = str(radioid_data[3])
+        edit_user.api_keys = str('[' + str(Fernet.generate_key())[2:-1] + ']')
         unreg_set = Misc.query.filter_by(field_1='unregistered_aprs').first()
         aprs_settings = ast.literal_eval(unreg_set.field_2)
         for i in radioid_data[0].items():
@@ -1175,6 +1177,8 @@ def hbnet_web_service():
             #user_id = request.args.get('user_id')
             u = current_user
             id_dict = ast.literal_eval(u.dmr_ids)
+            print(u.api_keys)
+            user_api = str(u.api_keys)[1:-1]
             #u = User.query.filter_by(username=user).first()
     ##        if request.args.get('mode') == 'generated':
           
@@ -1242,7 +1246,7 @@ def hbnet_web_service():
         
             
         #return str(content)
-        return render_template('view_passphrase.html', passphrase_content = Markup(content), server_content = Markup(svr_content))
+        return render_template('view_passphrase.html', passphrase_content = Markup(content), server_content = Markup(svr_content), user_api = user_api)
 
   
     @app.route('/update_ids', methods=['POST', 'GET'])
@@ -6622,7 +6626,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                     initial_admin_approved = True,
                     first_name = str(radioid_data[1]),
                     last_name = str(radioid_data[2]),
-                    city = str(radioid_data[3])
+                    city = str(radioid_data[3]),
+                    api_keys = str('[' + str(Fernet.generate_key())[2:-1] + ']')
                     
                 )
                 
@@ -7144,6 +7149,14 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 ##        content = dev_loc
 
         return render_template('aprs_page.html', markup_content = Markup(content))
+
+    @app.route('/api/<user>/<key>/<func>', methods=['POST', 'GET'])
+    def api_endpoint(user, key, func):
+        try:
+            u = User.query.filter(User.username == user).first()
+            return 'Your username is ' + u.username
+        except:
+            return 'Error'
 
     @app.route('/svr', methods=['POST'])
     def svr_endpoint():
