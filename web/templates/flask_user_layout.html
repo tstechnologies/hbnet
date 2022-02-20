@@ -102,9 +102,10 @@
           </a>
           <ul class="dropdown-menu" aria-labelledby="mmdvm_admin">
             <li><a class="dropdown-item" href="{{url}}/manage_servers">Manage Servers</a></li>
-        {% if global_config['mode'] == 'FULL' or global_config['mode'] == 'DMR_ONLY' %}
             <li><a class="dropdown-item" href="{{url}}/manage_peers">Manage Peers</a></li>
             <li><a class="dropdown-item" href="{{url}}/manage_masters">Manage Masters</a></li>
+            {% if global_config['mode'] == 'FULL' or global_config['mode'] == 'DMR_ONLY' %}
+
             <li><a class="dropdown-item" href="{{url}}/manage_rules">Manage Rules</a></li>
       <li><hr class="dropdown-divider"></li>
     {% endif %}

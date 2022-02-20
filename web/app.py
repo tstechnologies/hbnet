@@ -785,7 +785,7 @@ def hbnet_web_service():
     # The Home page is accessible to anyone
     @app.route('/')
     def home_page():
-        if mode == 'FULL':
+        if mode == 'FULL' or mode == 'DMR_ONLY':
             home_text = Misc.query.filter_by(field_1='home_page').first()
             #content = Markup('<strong>Index</strong>')
             try:
@@ -5824,7 +5824,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 </tr>
 
 <tr>
-<td><strong>&nbsp;Use Encryption:</strong></td>
+<td><strong>&nbsp;Encrypt all traffic:</strong></td>
 <td>&nbsp;<select name="obp_encryption">
 <option selected="selected" value="False">Current - False</option>
 <option value="True">True</option>
@@ -6333,7 +6333,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 </tr>
 
 <tr>
-<td><strong>&nbsp;Use Encryption:</strong></td>
+<td><strong>&nbsp;Encrypt all traffic:</strong></td>
 <td>&nbsp;<select name="obp_encryption">
 <option selected="selected" value="''' + str(o.obp_encryption) + '''">Current - ''' + str(o.obp_encryption) + '''</option>
 <option value="True">True</option>
@@ -7154,7 +7154,13 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     def api_endpoint(user, key, func):
         try:
             u = User.query.filter(User.username == user).first()
-            return 'Your username is ' + u.username
+            if key in u.api_keys:
+                if 'msg' in func:
+                    print('msg')
+                return 'Your username is ' + u.username
+                
+            else:
+                return 'Not Authenticated'
         except:
             return 'Error'
 
