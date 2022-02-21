@@ -6616,11 +6616,18 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                     except Exception as e:
                         aprs_dict[i[0]] = """[{'call': '""" + str(user.username).upper() + """'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]"""
                         print(e)
+                new_aprs = aprs_dict.copy()
+                for s in aprs_dict:
+                    for i in radioid_data[0].items():
+                        if i[0] == s:
+                             pass
+                        elif i[0] != s:
+                            new_aprs[i[0]] = """[{'call': '""" + str(request.form.get('username')).upper() + """'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]"""
                 user = User(
                     username=request.form.get('username'),
                     email=request.form.get('email'),
                     email_confirmed_at=datetime.datetime.utcnow(),
-                    aprs = str(aprs_dict),
+                    aprs = str(new_aprs),
                     password=user_manager.hash_password(request.form.get('password')),
                     dmr_ids = str(radioid_data[0]),
                     initial_admin_approved = True,
