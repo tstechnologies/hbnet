@@ -744,6 +744,11 @@ def decdeg2dms(dd):
    minutes,seconds = divmod(dd*3600,60)
    degrees,minutes = divmod(minutes,60)
    degrees = degrees if is_positive else -degrees
+
+   print(degrees)
+   print(minutes)
+   print(seconds)
+   
    return (degrees,minutes,seconds)
 
 def user_setting_write(dmr_id, setting, value, call_type):
@@ -887,7 +892,7 @@ def process_sms(_rf_src, sms, call_type, system_name):
         else:
             lat = decdeg2dms(mh.to_location(grid_square)[0])
             lon = decdeg2dms(mh.to_location(grid_square)[1])
-            
+           
             if lon[0] < 0:
                 lon_dir = 'W'
             if lon[0] > 0:
@@ -898,8 +903,8 @@ def process_sms(_rf_src, sms, call_type, system_name):
                 lat_dir = 'N'
             #logger.info(lat)
             #logger.info(lat_dir)
-            aprs_lat = str(str(re.sub('\..*|-', '', str(lat[0]))) + str(re.sub('\..*', '', str(lat[1])) + '.')).zfill(5) + '  ' + lat_dir
-            aprs_lon = str(str(re.sub('\..*|-', '', str(lon[0]))) + str(re.sub('\..*', '', str(lon[1])) + '.')).zfill(6) + '  ' + lon_dir
+            aprs_lat = str(str(re.sub('\..*|-', '', str(lat[0]))).zfill(2) + str(re.sub('\..*', '', str(lat[1])).zfill(2) + '.')) + '  ' + lat_dir
+            aprs_lon = str(str(re.sub('\..*|-', '', str(lon[0]))).zfill(3) + str(re.sub('\..*', '', str(lon[1])).zfill(2) + '.')) + '  ' + lon_dir
         logger.info('Latitude: ' + str(aprs_lat))
         logger.info('Longitude: ' + str(aprs_lon))
         # 14FRS2013 simplified and moved settings retrieval
@@ -1895,20 +1900,22 @@ if __name__ == '__main__':
     user_ssid = CONFIG['DATA_CONFIG']['USER_APRS_SSID']
     aprs_comment = CONFIG['DATA_CONFIG']['USER_APRS_COMMENT']
     aprs_filter = CONFIG['DATA_CONFIG']['APRS_FILTER']
+    
     # EMAIL variables
 ##    email_sender = CONFIG['DATA_CONFIG']['EMAIL_SENDER']
 ##    email_password = CONFIG['DATA_CONFIG']['EMAIL_PASSWORD']
 ##    smtp_server = CONFIG['DATA_CONFIG']['SMTP_SERVER']
 ##    smtp_port = CONFIG['DATA_CONFIG']['SMTP_PORT']
-
-    # Dashboard files
+##
+##    # Dashboard files
 ##    bb_file = CONFIG['DATA_CONFIG']['BULLETIN_BOARD_FILE']
 ##    loc_file = CONFIG['DATA_CONFIG']['LOCATION_FILE']
 ##    the_mailbox_file = CONFIG['DATA_CONFIG']['MAILBOX_FILE']
 ##    emergency_sos_file = CONFIG['DATA_CONFIG']['EMERGENCY_SOS_FILE']
 ##    sms_file = CONFIG['DATA_CONFIG']['SMS_FILE']
-    # User APRS settings
+##    # User APRS settings
     user_settings_file = CONFIG['DATA_CONFIG']['USER_SETTINGS_FILE']
+    
 
 ####    use_api = CONFIG['DATA_CONFIG']['USE_API']
 
