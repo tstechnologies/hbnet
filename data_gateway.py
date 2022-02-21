@@ -466,7 +466,7 @@ def download_config(CONFIG_FILE, cli_file):
                         corrected_config['DATA_CONFIG']['IGATE_BEACON_COMMENT'] = final_options[1]
                     if final_options[0] == 'igate_lat':
                         corrected_config['DATA_CONFIG']['IGATE_BEACON_LATITUDE'] = final_options[1]
-                    if final_options[0] == 'igate_longitude':
+                    if final_options[0] == 'igate_lon':
                         corrected_config['DATA_CONFIG']['IGATE_BEACON_LONGITUDE'] = final_options[1]
                         
                 
@@ -1419,7 +1419,9 @@ def aprs_rx(aprs_rx_login, aprs_passcode, aprs_server, aprs_port, aprs_filter, u
         logger.info(e)
         
 def aprs_beacon_send():
-    beacon_packet = CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL'] + '>APHBL3,TCPIP*:!' + CONFIG['DATA_CONFIG']['IGATE_LATITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][0]) + CONFIG['DATA_CONFIG']['IGATE_LONGITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][1]) + '/' + CONFIG['DATA_CONFIG']['IGATE_BEACON_COMMENT']
+    print(CONFIG['DATA_CONFIG'])
+    beacon_packet = CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL'] + '>APHBL3,TCPIP*:!' + CONFIG['DATA_CONFIG']['IGATE_BEACON_LATITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][0]) + CONFIG['DATA_CONFIG']['IGATE_BEACON_LONGITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][1]) + '/' + CONFIG['DATA_CONFIG']['IGATE_BEACON_COMMENT']
+    aprslib.parse(beacon_packet)
     aprs_send(beacon_packet)
     logger.info(beacon_packet)
 
