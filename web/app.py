@@ -7180,11 +7180,18 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
             u = User.query.filter(User.username == user).first()
             if key in u.api_keys:
                 if 'dmr_id' in api_data and 'sms' in api_data:
-                    #    def sms_que_add(_snd_call, _rcv_call, _snd_id, _rcv_id, _msg_type, _call_type, _server, _system_name, _msg):
-                    sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'unit', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
-                    msg = jsonify(status='Sucess',
-                    reason='Added SMS to que')
-                    response = make_response(msg, 200)
+                    u_role = UserRoles.query.filter_by(user_id=u.id).first()
+                    print(u_role.role_id)
+                    if u_role.role_id == 1 or allow_user_sms == True:
+                        #    def sms_que_add(_snd_call, _rcv_call, _snd_id, _rcv_id, _msg_type, _call_type, _server, _system_name, _msg):
+                        sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'unit', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
+                        msg = jsonify(status='Sucess',
+                        reason='Added SMS to que')
+                        response = make_response(msg, 200)
+                    else:
+                        msg = jsonify(status='SMS disabled',
+                        reason='SMS via API disabled. Contact administrator.')
+                        response = make_response(msg, 500)
                 if 'dmr_id' in api_data and 'sms' in api_data and 'gateway' not in api_data:
                     msg = jsonify(status='Not added to que',
                     reason='Gateway not specified')
