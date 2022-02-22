@@ -532,70 +532,77 @@ def aprs_send(packet):
         logger.info('Packet sent to APRS-IS.')
 
 def dashboard_loc_write(call, lat, lon, time, comment, dmr_id):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
-            send_dash_loc(CONFIG, call, lat, lon, time, comment, dmr_id)
-        else:
-            dash_entries = ast.literal_eval(os.popen('cat ' + loc_file).read())
-            dash_entries.insert(0, {'call': call, 'lat': lat, 'lon': lon, 'time':time, 'comment':comment})
-        # Clear old entries
-            list_index = 0
-            call_count = 0
-            new_dash_entries = []
-            for i in dash_entries:
-                if i['call'] == call:
-                    if call_count >= 25:
-                        pass
-                    else:
-                        new_dash_entries.append(i)
-                    call_count = call_count + 1
-
-                if call != i['call']:
-                    new_dash_entries.append(i)
-                    pass
-                list_index = list_index + 1
-            with open(loc_file, 'w') as user_loc_file:
-                    user_loc_file.write(str(new_dash_entries[:500]))
-                    user_loc_file.close()
-        logger.info('User location saved for dashboard')
-        #logger.info(dash_entries)
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
+        send_dash_loc(CONFIG, call, lat, lon, time, comment, dmr_id)
+        logger.info('Sent to web service/dashboard')
     else:
-        pass
+        logger.info('Web service/dashboard not enabled.')
+
+##        dash_entries = ast.literal_eval(os.popen('cat ' + loc_file).read())
+##        dash_entries.insert(0, {'call': call, 'lat': lat, 'lon': lon, 'time':time, 'comment':comment})
+##    # Clear old entries
+##        list_index = 0
+##        call_count = 0
+##        new_dash_entries = []
+##        for i in dash_entries:
+##            if i['call'] == call:
+##                if call_count >= 25:
+##                    pass
+##                else:
+##                    new_dash_entries.append(i)
+##                call_count = call_count + 1
+##
+##            if call != i['call']:
+##                new_dash_entries.append(i)
+##                pass
+##            list_index = list_index + 1
+##        with open(loc_file, 'w') as user_loc_file:
+##                user_loc_file.write(str(new_dash_entries[:500]))
+##                user_loc_file.close()
+##    logger.info('User location saved for dashboard')
+    #logger.info(dash_entries)
+##    else:
+##        pass
     
 def dashboard_bb_write(call, dmr_id, time, bulletin, system_name):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
-            send_bb(CONFIG, call, dmr_id, bulletin, system_name)
-        else:
-            #try:
-            dash_bb = ast.literal_eval(os.popen('cat ' + bb_file).read())
-           # except:
-            #    dash_entries = []
-            dash_bb.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'bulletin':bulletin})
-            with open(bb_file, 'w') as user_bb_file:
-                    user_bb_file.write(str(dash_bb[:20]))
-                    user_bb_file.close()
-            logger.info('User bulletin entry saved.')
-            #logger.info(dash_bb)
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
+        send_bb(CONFIG, call, dmr_id, bulletin, system_name)
     else:
-        pass
+        logger.info('Web service/dashboard not enabled.')
+##            #try:
+##            dash_bb = ast.literal_eval(os.popen('cat ' + bb_file).read())
+##           # except:
+##            #    dash_entries = []
+##            dash_bb.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'bulletin':bulletin})
+##            with open(bb_file, 'w') as user_bb_file:
+##                    user_bb_file.write(str(dash_bb[:20]))
+##                    user_bb_file.close()
+##            logger.info('User bulletin entry saved.')
+##            #logger.info(dash_bb)
+##    else:
+##        pass
 
 def dashboard_sms_write(snd_call, rcv_call, rcv_dmr_id, snd_dmr_id, sms, time, system_name):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
-            send_sms_log(CONFIG, snd_call, rcv_call, sms, rcv_dmr_id, snd_dmr_id, system_name)
-        else:
-            #try:
-            dash_sms = ast.literal_eval(os.popen('cat ' + sms_file).read())
-           # except:
-            #    dash_entries = []
-            dash_sms.insert(0, {'snd_call': snd_call, 'rcv_call':rcv_call, 'snd_dmr_id': snd_dmr_id, 'rcv_dmr_id':rcv_dmr_id, 'time': time, 'sms':sms})
-            with open(sms_file, 'w') as user_sms_file:
-                    user_sms_file.write(str(dash_sms[:25]))
-                    user_sms_file.close()
-            logger.info('User SMS entry saved.')
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
+        send_sms_log(CONFIG, snd_call, rcv_call, sms, rcv_dmr_id, snd_dmr_id, system_name)
+        logger.info('Web service/dashboard not enabled.')
     else:
-        pass
+        logger.info('Web service/dashboard not enabled.')
+
+##            #try:
+##            dash_sms = ast.literal_eval(os.popen('cat ' + sms_file).read())
+##           # except:
+##            #    dash_entries = []
+##            dash_sms.insert(0, {'snd_call': snd_call, 'rcv_call':rcv_call, 'snd_dmr_id': snd_dmr_id, 'rcv_dmr_id':rcv_dmr_id, 'time': time, 'sms':sms})
+##            with open(sms_file, 'w') as user_sms_file:
+##                    user_sms_file.write(str(dash_sms[:25]))
+##                    user_sms_file.close()
+##            logger.info('User SMS entry saved.')
+##    else:
+##        pass
 
 
 def mailbox_write(call, dmr_id, time, message, recipient):
