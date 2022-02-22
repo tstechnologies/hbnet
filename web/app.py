@@ -7171,20 +7171,37 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 
         return render_template('aprs_page.html', markup_content = Markup(content))
 
-    @app.route('/api/<user>/<key>/<func>', methods=['POST', 'GET'])
-    def api_endpoint(user, key, func):
+# User API endpoint, for apps, etc.
+    @app.route('/api/<user>/<key>', methods=['POST'])
+    def api_endpoint(user, key):
+        api_data = request.json
+        print(api_data)
         try:
             u = User.query.filter(User.username == user).first()
             if key in u.api_keys:
-                if 'msg' in func:
-                    print('msg')
-                return 'Your username is ' + u.username
+                if 'dmr_id' in api_data and 'sms' in api_data:
+                    #    def sms_que_add(_snd_call, _rcv_call, _snd_id, _rcv_id, _msg_type, _call_type, _server, _system_name, _msg):
+                    sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'unit', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
+                    msg = jsonify(status='Sucess',
+                    reason='Added SMS to que')
+                    response = make_response(msg, 200)
+                if 'dmr_id' in api_data and 'sms' in api_data and 'gateway' not in api_data:
+                    msg = jsonify(status='Not added to que',
+                    reason='Gateway not specified')
+                    response = make_response(msg, 500)
+
+                    
+                return response
                 
             else:
-                return 'Not Authenticated'
+                msg = jsonify(status='Access Denied',
+                reason='Not Authorized')
+                response = make_response(msg, 401)
+                return response
         except:
             return 'Error'
 
+# Server endpoint
     @app.route('/svr', methods=['POST'])
     def svr_endpoint():
         hblink_req = request.json
