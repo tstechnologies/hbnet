@@ -1198,24 +1198,31 @@ def create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string):
                 the_mmdvm_pkt = mmdvm_encapsulate(dst_id, src_id, peer_id, cap_in, _slot, _call_type, 6, rand_seq, i) #(bytes.fromhex(re.sub("b'|'", '', str(orig_cap[cap_in][20:-4])))))
             else:
                 the_mmdvm_pkt = mmdvm_encapsulate(dst_id, src_id, peer_id, cap_in, _slot, _call_type, 7, rand_seq, i)#(bytes.fromhex(re.sub("b'|'", '', str(orig_cap[cap_in][20:-4])))))
-            mmdvm_send_seq.append(ahex(the_mmdvm_pkt))
+##            mmdvm_send_seq.append(ahex(the_mmdvm_pkt))
+            mmdvm_send_seq.append(the_mmdvm_pkt)
             cap_in = cap_in + 1
-            print(ahex(the_mmdvm_pkt))
-        if bytes.fromhex(dst_id) in UNIT_MAP:
-            logger.info('Sending SMS packet to ' + str(UNIT_MAP[bytes.fromhex(dst_id)][0]))
-            systems[UNIT_MAP[bytes.fromhex(dst_id)][0]].send_system(the_mmdvm_pkt)
-        else:
-            for s in CONFIG['SYSTEMS'].items():
-                if 'FREEDMR' in s[1]['OTHER_OPTIONS']:
-                    systems[s[0]].send_system(b'SVRDDATA' + the_mmdvm_pkt)
-                else:
-                    systems[s[0]].send_system(the_mmdvm_pkt)
-                logger.info('Sending SMS packet to ' + str(s[0]))
+            
+##        if bytes.fromhex(dst_id) in UNIT_MAP:
+##            logger.info('Sending SMS packet to ' + str(UNIT_MAP[bytes.fromhex(dst_id)][0]))
+##            print(the_mmdvm_pkt)
+##            print(type(the_mmdvm_pkt))
+##            systems[UNIT_MAP[bytes.fromhex(dst_id)][0]].send_system(the_mmdvm_pkt)
+##        else:
+##            for s in CONFIG['SYSTEMS'].items():
+##                if 'FREEDMR' in s[1]['OTHER_OPTIONS']:
+####                    systems[s[0]].send_system(b'SVRDDATA' + the_mmdvm_pkt)
+##                    systems[s[0]].send_system(b'DMRF' + the_mmdvm_pkt)
+##                else:
+##                    systems[s[0]].send_system(the_mmdvm_pkt)
+##                logger.info('Sending SMS packet to ' + str(s[0]))
+
+            
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:  
         with open('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + str(random.randint(1000, 9999)) + '.mmdvm_seq', "w") as packet_write_file:
             packet_write_file.write(str(mmdvm_send_seq))
-
+            
     return mmdvm_send_seq
+##    return the_mmdvm_pkt
 
 # Built for max length msg, will improve later
 def sms_headers(to_id, from_id):
@@ -1279,7 +1286,7 @@ def gen_header(to_id, from_id, call_type):
         seq_header = '824A' + to_id + from_id + '9550'
     return seq_header
 
-def send_sms(csbk, to_id, from_id, peer_id, call_type, msg):
+def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
     global use_csbk
     sleep(1)
     use_csbk = csbk
@@ -1288,7 +1295,7 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg):
     peer_id = str(hex(peer_id))[2:].zfill(8)
     if call_type == 'unit':
         call_type = 1
-        slot = 1
+        slot = snd_slot
 ##        # Try to find slot from UNIT_MAP
 ##        try:
 ##            #Slot 2
@@ -1304,12 +1311,42 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg):
     if call_type == 'group':
         call_type = 0
         # Send all Group data to TS 2, need to fix later.
-        slot = 1
+        slot = snd_slot
     if csbk == True:
         use_csbk = True
-        create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, csbk_gen(to_id, from_id) + create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(msg, to_id, from_id)))
-    else:
-        create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##        if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'] == 'OPENBRIDGE':
+##            print('OBP')
+##        create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, csbk_gen(to_id, from_id) + create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(msg, to_id, from_id)))
+
+  # We know where the user is
+    if bytes.fromhex(to_id) in UNIT_MAP:
+        print('yay')
+##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
+        if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                slot = 0
+                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                for d in snd_seq_lst:
+                    systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                logger.info('Sending on TS: ' + str(slot))
+        elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                for d in snd_seq_lst:
+                    systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                logger.info('Sending on TS: ' + str(slot))
+  # We don't know where the user is
+    elif bytes.fromhex(to_id) not in UNIT_MAP:
+        for s in CONFIG['SYSTEMS']:
+            if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                slot = 0
+                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                for d in snd_seq_lst:
+                    systems[s].send_system(d)
+                logger.info('User not in map. Sending on TS: ' + str(slot))
+            elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                for d in snd_seq_lst:
+                    systems[s].send_system(d)
+                logger.info('User not in map. Sending on TS: ' + str(slot))
 
 ##def data_que_check():
 ##    l=task.LoopingCall(data_que_send)
@@ -2026,3 +2063,6 @@ if __name__ == '__main__':
         aprs_thread.daemon = True
         aprs_thread.start()
     reactor.run()
+
+# John 3:16 - For God so loved the world, that he gave his only Son,
+# that whoever believes in him should not perish but have eternal life.
