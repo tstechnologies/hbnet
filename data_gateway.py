@@ -239,7 +239,7 @@ def send_mb(CONFIG, _dst_callsign, _src_callsign, message, _dst_dmr_id, _src_dmr
 
         
 def send_ss(CONFIG, callsign, message, dmr_id):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+    if LOCAL_CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         user_man_url = CONFIG['WEB_SERVICE']['URL']
         shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
         sms_data = {
@@ -532,217 +532,35 @@ def aprs_send(packet):
         logger.info('Packet sent to APRS-IS.')
 
 def dashboard_loc_write(call, lat, lon, time, comment, dmr_id):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         send_dash_loc(CONFIG, call, lat, lon, time, comment, dmr_id)
         logger.info('Sent to web service/dashboard')
     else:
         logger.info('Web service/dashboard not enabled.')
 
-##        dash_entries = ast.literal_eval(os.popen('cat ' + loc_file).read())
-##        dash_entries.insert(0, {'call': call, 'lat': lat, 'lon': lon, 'time':time, 'comment':comment})
-##    # Clear old entries
-##        list_index = 0
-##        call_count = 0
-##        new_dash_entries = []
-##        for i in dash_entries:
-##            if i['call'] == call:
-##                if call_count >= 25:
-##                    pass
-##                else:
-##                    new_dash_entries.append(i)
-##                call_count = call_count + 1
-##
-##            if call != i['call']:
-##                new_dash_entries.append(i)
-##                pass
-##            list_index = list_index + 1
-##        with open(loc_file, 'w') as user_loc_file:
-##                user_loc_file.write(str(new_dash_entries[:500]))
-##                user_loc_file.close()
-##    logger.info('User location saved for dashboard')
-    #logger.info(dash_entries)
-##    else:
-##        pass
     
 def dashboard_bb_write(call, dmr_id, time, bulletin, system_name):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         send_bb(CONFIG, call, dmr_id, bulletin, system_name)
+        logger.info('Sent to web service/dashboard')
     else:
         logger.info('Web service/dashboard not enabled.')
-##            #try:
-##            dash_bb = ast.literal_eval(os.popen('cat ' + bb_file).read())
-##           # except:
-##            #    dash_entries = []
-##            dash_bb.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'bulletin':bulletin})
-##            with open(bb_file, 'w') as user_bb_file:
-##                    user_bb_file.write(str(dash_bb[:20]))
-##                    user_bb_file.close()
-##            logger.info('User bulletin entry saved.')
-##            #logger.info(dash_bb)
-##    else:
-##        pass
 
 def dashboard_sms_write(snd_call, rcv_call, rcv_dmr_id, snd_dmr_id, sms, time, system_name):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         send_sms_log(CONFIG, snd_call, rcv_call, sms, rcv_dmr_id, snd_dmr_id, system_name)
-        logger.info('Web service/dashboard not enabled.')
+        logger.info('Sent to web service/dashboard')
     else:
         logger.info('Web service/dashboard not enabled.')
 
-##            #try:
-##            dash_sms = ast.literal_eval(os.popen('cat ' + sms_file).read())
-##           # except:
-##            #    dash_entries = []
-##            dash_sms.insert(0, {'snd_call': snd_call, 'rcv_call':rcv_call, 'snd_dmr_id': snd_dmr_id, 'rcv_dmr_id':rcv_dmr_id, 'time': time, 'sms':sms})
-##            with open(sms_file, 'w') as user_sms_file:
-##                    user_sms_file.write(str(dash_sms[:25]))
-##                    user_sms_file.close()
-##            logger.info('User SMS entry saved.')
-##    else:
-##        pass
 
 
 def mailbox_write(call, dmr_id, time, message, recipient):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-##        #try:
-##        print(call)
-##        print()
-##        print()
-##        print(recipient)
-        if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
-            send_mb(CONFIG, call, recipient, message, 0, 0, 'APRS-IS')
+    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
+        send_mb(CONFIG, call, recipient, message, 0, 0, 'APRS-IS')
 
-        else:        
-##            mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
-##            mail_file.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'message':message, 'recipient': recipient})
-##            with open(the_mailbox_file, 'w') as mailbox_file:
-##                    mailbox_file.write(str(mail_file[:100]))
-##                    mailbox_file.close()
-##            logger.info('User mail saved.')
-##    else:
-##        pass
-
-##def mailbox_delete(dmr_id):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-##        mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
-##        call = str(get_alias((dmr_id), subscriber_ids))
-##        new_data = []
-##        for message in mail_file:
-##            if message['recipient'] != call:
-##                new_data.append(message)
-##        with open(the_mailbox_file, 'w') as mailbox_file:
-##                mailbox_file.write(str(new_data[:100]))
-##                mailbox_file.close()
-##        logger.info('Mailbox updated. Delete occurred.')
-##    else:
-##        pass
-
-
-##def sos_write(dmr_id, time, message):
-##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-##        user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
-##        print(user_settings)
-##        try:
-##            if user_settings[dmr_id][1]['ssid'] == '':
-##                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_ssid
-##            else:
-##                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_settings[dmr_id][1]['ssid']
-##        except:
-##            sos_call = str(get_alias((dmr_id), subscriber_ids))
-##        sos_info = {'call': sos_call, 'dmr_id': dmr_id, 'time': time, 'message':message}
-##        with open(emergency_sos_file, 'w') as sos_file:
-##                sos_file.write(str(sos_info))
-##                sos_file.close()
-##        logger.info('Saved SOS.')
-##    else:
-##        pass
-    
-##def send_app_request(url, message, source_id):
-##    #url = url + '/app'
-##    #Load current AUTH token list
-##    auth_file = ast.literal_eval(os.popen('cat ' + auth_token_file).read())
-##    the_token = str(hashlib.md5(str(time()).encode('utf-8')).hexdigest())
-##    new_auth_file = auth_file
-##    new_auth_file.append(the_token)
-##    # Write new list to file
-##    with open(auth_token_file, 'w') as auth_token:
-##        auth_token.write(str(auth_file))
-##        auth_token.close()
-##    app_request = {
-##    'mode':'app',
-##    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
-##    'server_name':CONFIG['DATA_CONFIG']['SERVER_NAME'],
-##    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
-##    'auth_token':the_token,
-##    'data':{
-##            'source_id':source_id,
-##            'slot':0,
-##            'msg_type':'unit',
-##            'msg_format':'motorola',
-##            'message':message
-##            }
-##    }
-##    json_object = json.dumps(app_request, indent = 4)
-##    print(json_object)
-##    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
-##
-##    
-##def send_msg_xfer(url, user, password, message, source_id, dest_id):
-##    url = url + '/api/msg_xfer'
-##    msg_xfer = {
-##    'mode':'msg_xfer',
-##    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
-##    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
-##    'auth_type':'private',
-##    'credentials': {
-##        'user':user,
-##        'password':password,
-##        },
-##    'data':{
-##            1:{'source_id':source_id,
-##                'destination_id':dest_id,
-##                'slot':0,
-##                'msg_type':'unit',
-##                'msg_format':'motorola',
-##                'message':message
-##               }
-##           }
-##    }
-##    json_object = json.dumps(msg_xfer, indent = 4)
-##    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
-
-
-### Send email via SMTP function
-##def send_email(to_email, email_subject, email_message):
-##    global smtp_server
-##    sender_address = email_sender
-##    account_password = email_password
-##    smtp_server = smtplib.SMTP_SSL(smtp_server, int(smtp_port))
-##    smtp_server.login(sender_address, account_password)
-##    message = "From: " + aprs_callsign + " D-APRS Gateway\nTo: " + to_email + "\nContent-type: text/html\nSubject: " + email_subject + "\n\n" + '<strong>' + email_subject + '</strong><p>&nbsp;</p><h3>' + email_message + '</h3><p>&nbsp;</p><p>This message was sent to you from a D-APRS gateway operated by <strong>' + aprs_callsign + '</strong>. Do not reply as this gateway is only one way at this time.</p>'
-##    smtp_server.sendmail(sender_address, to_email, message)
-##    smtp_server.close()
-
-##def generate_apps():
-##    global access_systems
-##    #local_apps = ast.literal_eval(os.popen('cat ' + access_systems_file).read())
-##    public_systems_file = requests.get(CONFIG['DATA_CONFIG']['PUBLIC_APPS_LIST'])
-##    public_apps = ast.literal_eval(public_systems_file.text)
-##    access_systems = {}
-##    #combined = public_apps.items() + local_acess_systems.items()
-##    if CONFIG['DATA_CONFIG']['USE_PUBLIC_APPS'] == True:
-##        for i in public_apps.items():
-##            key = str(i[0])
-##            access_systems[key] = i[1]
-##    for i in local_apps.items():
-##        key = str(i[0])
-##        access_systems[key] = i[1]
-##    print(access_systems)
-##    
-##    return access_systems
+    else:
+        logger.info('Web service/dashboard not enabled.')
 
 # Thanks for this forum post for this - https://stackoverflow.com/questions/2579535/convert-dd-decimal-degrees-to-dms-degrees-minutes-seconds-in-python
 
@@ -753,10 +571,6 @@ def decdeg2dms(dd):
    degrees,minutes = divmod(minutes,60)
    degrees = degrees if is_positive else -degrees
 
-   print(degrees)
-   print(minutes)
-   print(seconds)
-   
    return (degrees,minutes,seconds)
 
 def user_setting_write(dmr_id, setting, value, call_type):
@@ -861,36 +675,13 @@ def process_sms(_rf_src, sms, call_type, system_name):
     elif '*BB' in parse_sms[0]:
         dashboard_bb_write(get_alias(int_id(_rf_src), subscriber_ids), int_id(_rf_src), time(), re.sub('\*BB|\*BB ','',sms), system_name)
 
-    # Email command, going away
-##    elif '@' in parse_sms[0][1:] and '.' in parse_sms[0]: # and ' E-' in sms:
-##        s = ' '
-##        email_message =  s.join(parse_sms[1:])#str(re.sub('.*@|.* E-', '', sms))
-##        to_email = parse_sms[0]#str(re.sub(' E-.*', '', sms))
-##        email_subject = 'New message from ' + str(get_alias(int_id(_rf_src), subscriber_ids))
-##        logger.info('Email to: ' + to_email)
-##        logger.info('Message: ' + email_message)
-##        try:
-##            send_email(to_email, email_subject, email_message)
-##            logger.info('Email sent.')
-##        except Exception as error_exception:
-##            logger.info('Failed to send email.')
-##            logger.info(error_exception)
-##            logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
-    
-##    elif '*SOS' in sms or '@NOTICE' in sms:
-##        sos_write(int_id(_rf_src), time(), sms)
-##    elif '*REM SOS' == sms:
-##        os.remove(emergency_sos_file)
-##        logger.info('Removing SOS or Notice')
-
     # Note to self, rewrite this command
         
 ##    elif '@' in parse_sms[0][0:1] and 'M-' in parse_sms[1][0:2]:
 ##        message = re.sub('^@|.* M-|','',sms)
 ##        recipient = re.sub('@| M-.*','',sms)
 ##        mailbox_write(get_alias(int_id(_rf_src), subscriber_ids), int_id(_rf_src), time(), message, str(recipient).upper())
-##    elif '*REM MAIL' == sms:
-##        mailbox_delete(_rf_src)
+
         
     elif '*MH' in parse_sms[0]:
         print(parse_sms)
@@ -953,35 +744,6 @@ def process_sms(_rf_src, sms, call_type, system_name):
             logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
         packet_assembly = ''
           
-##    elif '?' in parse_sms[0][0:1]:
-##        use_api = CONFIG['DATA_CONFIG']['USE_API']
-##        print(use_api)
-##        if use_api == True:
-##            auth_tokens = ast.literal_eval(os.popen('cat ' + auth_token_file).read())
-##            #access_systems = ast.literal_eval(os.popen('cat ' + access_systems_file).read())
-##            #authorized_users = ast.literal_eval(os.popen('cat ' + authorized_users_file).read())
-##            system = parse_sms[0][1:]
-##            #print(access_systems[system])
-##            #print(authorized_users)
-##            # Determin msg_xfer or app
-##            if access_systems[system]['mode'] == 'msg_xfer':
-##                s = ' '
-##                message_to_send = s.join(parse_sms[2:])
-##                dest_id = int(parse_sms[1])
-##                source_id = int_id(_rf_src)
-##                send_msg_xfer(access_systems[system]['url'], access_systems[system]['user'], access_systems[system]['password'], message_to_send, source_id, dest_id)
-##            if access_systems[system]['mode'] == 'app':
-##                s = ' '
-##                message_to_send = s.join(parse_sms[1:])
-##                source_id = int_id(_rf_src)
-##                send_app_request(access_systems[system]['url'], message_to_send, source_id)
-##                
-##                
-##        if use_api == False:
-##            if call_type == 'unit':
-##                send_sms(False, int_id(_rf_src), 9, 9, 'unit', 'API not enabled. Contact server admin.')
-##            if call_type == 'vcsbk':
-##                send_sms(False, 9, 9, 9, 'group', 'API not enabled. Contact server admin.')
 
     elif '@' in parse_sms[0][0:1] and ' ' in sms: #'M-' not in parse_sms[1][0:2] or '@' not in parse_sms[0][1:]:
         #Example SMS text: @ARMDS This is a test.
@@ -1356,49 +1118,6 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                     systems[s].send_system(d)
                 logger.info('User not in map. Sending on TS: ' + str(slot))
 
-##def data_que_check():
-##    l=task.LoopingCall(data_que_send)
-##    l.start(1)
-##def data_que_send():
-##    #logger.info('Check SMS que')
-##    try:
-##        #logger.info(UNIT_MAP)
-##        for packet_file in os.listdir('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/'):
-##            logger.info('Sending SMS')
-##            logger.info(os.listdir('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/'))
-##            snd_seq = ast.literal_eval(os.popen('cat /tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + packet_file).read())
-##            for data in snd_seq:
-##                # Get dest id
-##                dst_id = bytes.fromhex(str(data[10:16])[2:-1])
-##                call_type = hex2bits(data)[121:122]
-##                # Handle UNIT calls
-##                if call_type[0] == True:
-##                # If destination ID in map, route call only there
-##                    if dst_id in UNIT_MAP:
-##                        data_target = UNIT_MAP[dst_id][0]
-##                        reactor.callFromThread(systems[data_target].send_system,bytes.fromhex(re.sub("b'|'", '', str(data))))
-##                        logger.info('Sending data to ' + str(data[10:16])[2:-1] + ' on system ' + data_target)
-##                    # Flood all systems
-##                    elif dst_id not in UNIT_MAP:
-##                        for i in UNIT:
-##                            reactor.callFromThread(systems[i].send_system,bytes.fromhex(re.sub("b'|'", '', str(data))))
-##                            logger.info('Sending data to ' + str(data[10:16])[2:-1] + ' on system ' + i)
-##                # Handle group calls
-##                elif call_type[0] == False:
-##                    for i in BRIDGES.items():
-##                        for d in i[1]:
-##                            if dst_id == d['TGID']:
-##                                data_target = d['SYSTEM']
-##                                reactor.callFromThread(systems[data_target].send_system,bytes.fromhex(re.sub("b'|'", '', str(data))))
-##                                logger.info('Sending data to ' + str(data[10:16])[2:-1] + ' on system ' + data_target)
-##      
-##            os.system('rm /tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + packet_file)
-##
-##                    #routerHBP.send_peer('MASTER-2', bytes.fromhex(re.sub("b'|'", '', str(data))))
-##    ##            os.system('rm /tmp/.hblink_data_que/' + packet_file)
-##    except Exception as e:
-##        logger.info(e)
-
 def aprs_process(packet):
     print(aprslib.parse(packet))
     try:
@@ -1688,25 +1407,6 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                     # End APRS-IS upload
                 # Assume this is an SMS message
                 elif '$GPRMC' not in final_packet or '$GNRMC' not in final_packet:
-                    
-####                            # Motorola type SMS header
-##                            if '824a' in hdr_start or '024a' in hdr_start:
-##                                logger.info('\nMotorola type SMS')
-##                                sms = codecs.decode(bytes.fromhex(''.join(sms_hex[74:-8].split('00'))), 'utf-8')
-##                                logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(sms) + '\n')
-##                                process_sms(_rf_src, sms)
-##                                packet_assembly = ''
-##                            # ETSI? type SMS header    
-##                            elif '0244' in hdr_start or '8244' in hdr_start:
-##                                logger.info('ETSI? type SMS')
-##                                sms = codecs.decode(bytes.fromhex(''.join(sms_hex[64:-8].split('00'))), 'utf-8')
-##                                logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(sms) + '\n')
-##                                #logger.info(final_packet)
-##                                #logger.info(sms_hex[64:-8])
-##                                process_sms(_rf_src, sms)
-##                                packet_assembly = ''
-####                                
-##                            else:
                         logger.info('\nSMS detected. Attempting to parse.')
                         #logger.info(final_packet)
                         logger.info(sms_hex)
@@ -1938,7 +1638,6 @@ if __name__ == '__main__':
     data_id_str = str('[' + CONFIG['DATA_CONFIG']['DATA_DMR_ID'] + ']')
     data_id = ast.literal_eval(data_id_str)
     
-    #echo_id = int(CONFIG['DATA_CONFIG']['ECHO_DMR_ID'])
 
     # Group call or Unit (private) call
     call_type = CONFIG['DATA_CONFIG']['CALL_TYPE']
@@ -1951,18 +1650,7 @@ if __name__ == '__main__':
     aprs_comment = CONFIG['DATA_CONFIG']['USER_APRS_COMMENT']
     aprs_filter = CONFIG['DATA_CONFIG']['APRS_FILTER']
     
-    # EMAIL variables
-##    email_sender = CONFIG['DATA_CONFIG']['EMAIL_SENDER']
-##    email_password = CONFIG['DATA_CONFIG']['EMAIL_PASSWORD']
-##    smtp_server = CONFIG['DATA_CONFIG']['SMTP_SERVER']
-##    smtp_port = CONFIG['DATA_CONFIG']['SMTP_PORT']
-##
-##    # Dashboard files
-##    bb_file = CONFIG['DATA_CONFIG']['BULLETIN_BOARD_FILE']
-##    loc_file = CONFIG['DATA_CONFIG']['LOCATION_FILE']
-##    the_mailbox_file = CONFIG['DATA_CONFIG']['MAILBOX_FILE']
-##    emergency_sos_file = CONFIG['DATA_CONFIG']['EMERGENCY_SOS_FILE']
-##    sms_file = CONFIG['DATA_CONFIG']['SMS_FILE']
+
 ##    # User APRS settings
     user_settings_file = CONFIG['DATA_CONFIG']['USER_SETTINGS_FILE']
     
@@ -1980,37 +1668,7 @@ if __name__ == '__main__':
             Path(user_settings_file).touch()
             with open(user_settings_file, 'w') as user_dict_file:
                 user_dict_file.write("{1: [{'call': 'N0CALL'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]}")
-                user_dict_file.close()
-##        if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-##            # Check to see if dashboard files exist
-##            if Path(loc_file).is_file():
-##                pass
-##            else:
-##                Path(loc_file).touch()
-##                with open(loc_file, 'w') as user_loc_file:
-##                    user_loc_file.write("[]")
-##                    user_loc_file.close()
-##            if Path(bb_file).is_file():
-##                pass
-##            else:
-##                Path(bb_file).touch()
-##                with open(bb_file, 'w') as user_bb_file:
-##                    user_bb_file.write("[]")
-##                    user_bb_file.close()
-##                    
-##            if Path(sms_file).is_file():
-##                pass
-##            else:
-##                Path(sms_file).touch()
-##                with open(sms_file, 'w') as user_sms_file:
-##                    user_sms_file.write("[]")
-##                    user_sms_file.close()
-##        try:
-##            Path('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/').mkdir(parents=True, exist_ok=True)
-##            logger.info('Created que directory')
-##        except:
-##            logger.info('Unable to create data que directory')
-##            pass    
+                user_dict_file.close()    
 
     # Start the system logger
     if cli_args.LOG_LEVEL:
