@@ -5346,7 +5346,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
             use_acl = False
             peer_loose = True
             unit_enabled = False
-            if request.form.get('enabled') == 'true':
+            if request.form.get('enabled') == 'True':
                 peer_enabled = True
 ##            if request.form.get('loose') == 'true':
 ##                peer_loose = True
@@ -6613,8 +6613,11 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                             aprs_dict[i[0]] = aprs_settings[i[0]]
                             del aprs_settings[i[0]]
                             misc_edit_field_1('unregistered_aprs', str(aprs_settings), '', '', 0, 0, 0, 0, False, False)
+                        elif i[0] not in aprs_settings:
+                            aprs_dict[i[0]] = """[{'call': '""" + str(request.form.get('username')).upper() + """'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]"""
+
                     except Exception as e:
-                        aprs_dict[i[0]] = """[{'call': '""" + str(user.username).upper() + """'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]"""
+                        aprs_dict[i[0]] = """[{'call': '""" + str(request.form.get('username')).upper() + """'}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]"""
                         print(e)
                 new_aprs = aprs_dict.copy()
                 for s in aprs_dict:
