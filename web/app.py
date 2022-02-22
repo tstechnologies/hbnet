@@ -2609,6 +2609,8 @@ FLOOD_TIMEOUT = ''' + str(s.unit_time)
             content = '''
       <h1 style="text-align: center;">APRS Settings</h1>
 
+<p style="text-align: center;"><br /> Your API key: <strong>''' + str(user_aprs.api_keys)[1:-1] + '''</strong> </p>
+
     <table class="table" >
       <thead>
         <tr>
