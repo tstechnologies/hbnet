@@ -606,142 +606,143 @@ def dashboard_sms_write(snd_call, rcv_call, rcv_dmr_id, snd_dmr_id, sms, time, s
 
 
 def mailbox_write(call, dmr_id, time, message, recipient):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        #try:
-        print(call)
-        print()
-        print()
-        print(recipient)
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+##        #try:
+##        print(call)
+##        print()
+##        print()
+##        print(recipient)
         if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
             send_mb(CONFIG, call, recipient, message, 0, 0, 'APRS-IS')
 
         else:        
-            mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
-            mail_file.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'message':message, 'recipient': recipient})
-            with open(the_mailbox_file, 'w') as mailbox_file:
-                    mailbox_file.write(str(mail_file[:100]))
-                    mailbox_file.close()
-            logger.info('User mail saved.')
-    else:
-        pass
+##            mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
+##            mail_file.insert(0, {'call': call, 'dmr_id': dmr_id, 'time': time, 'message':message, 'recipient': recipient})
+##            with open(the_mailbox_file, 'w') as mailbox_file:
+##                    mailbox_file.write(str(mail_file[:100]))
+##                    mailbox_file.close()
+##            logger.info('User mail saved.')
+##    else:
+##        pass
 
-def mailbox_delete(dmr_id):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
-        call = str(get_alias((dmr_id), subscriber_ids))
-        new_data = []
-        for message in mail_file:
-            if message['recipient'] != call:
-                new_data.append(message)
-        with open(the_mailbox_file, 'w') as mailbox_file:
-                mailbox_file.write(str(new_data[:100]))
-                mailbox_file.close()
-        logger.info('Mailbox updated. Delete occurred.')
-    else:
-        pass
+##def mailbox_delete(dmr_id):
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+##        mail_file = ast.literal_eval(os.popen('cat ' + the_mailbox_file).read())
+##        call = str(get_alias((dmr_id), subscriber_ids))
+##        new_data = []
+##        for message in mail_file:
+##            if message['recipient'] != call:
+##                new_data.append(message)
+##        with open(the_mailbox_file, 'w') as mailbox_file:
+##                mailbox_file.write(str(new_data[:100]))
+##                mailbox_file.close()
+##        logger.info('Mailbox updated. Delete occurred.')
+##    else:
+##        pass
 
 
-def sos_write(dmr_id, time, message):
-    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
-        user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
-        print(user_settings)
-        try:
-            if user_settings[dmr_id][1]['ssid'] == '':
-                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_ssid
-            else:
-                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_settings[dmr_id][1]['ssid']
-        except:
-            sos_call = str(get_alias((dmr_id), subscriber_ids))
-        sos_info = {'call': sos_call, 'dmr_id': dmr_id, 'time': time, 'message':message}
-        with open(emergency_sos_file, 'w') as sos_file:
-                sos_file.write(str(sos_info))
-                sos_file.close()
-        logger.info('Saved SOS.')
-    else:
-        pass
-def send_app_request(url, message, source_id):
-    #url = url + '/app'
-    #Load current AUTH token list
-    auth_file = ast.literal_eval(os.popen('cat ' + auth_token_file).read())
-    the_token = str(hashlib.md5(str(time()).encode('utf-8')).hexdigest())
-    new_auth_file = auth_file
-    new_auth_file.append(the_token)
-    # Write new list to file
-    with open(auth_token_file, 'w') as auth_token:
-        auth_token.write(str(auth_file))
-        auth_token.close()
-    app_request = {
-    'mode':'app',
-    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
-    'server_name':CONFIG['DATA_CONFIG']['SERVER_NAME'],
-    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
-    'auth_token':the_token,
-    'data':{
-            'source_id':source_id,
-            'slot':0,
-            'msg_type':'unit',
-            'msg_format':'motorola',
-            'message':message
-            }
-    }
-    json_object = json.dumps(app_request, indent = 4)
-    print(json_object)
-    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
-
+##def sos_write(dmr_id, time, message):
+##    if LOCAL_CONFIG['DATA_CONFIG']['USE_DASHBOARD'] == True:
+##        user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
+##        print(user_settings)
+##        try:
+##            if user_settings[dmr_id][1]['ssid'] == '':
+##                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_ssid
+##            else:
+##                sos_call = user_settings[dmr_id][0]['call'] + '-' + user_settings[dmr_id][1]['ssid']
+##        except:
+##            sos_call = str(get_alias((dmr_id), subscriber_ids))
+##        sos_info = {'call': sos_call, 'dmr_id': dmr_id, 'time': time, 'message':message}
+##        with open(emergency_sos_file, 'w') as sos_file:
+##                sos_file.write(str(sos_info))
+##                sos_file.close()
+##        logger.info('Saved SOS.')
+##    else:
+##        pass
     
-def send_msg_xfer(url, user, password, message, source_id, dest_id):
-    url = url + '/api/msg_xfer'
-    msg_xfer = {
-    'mode':'msg_xfer',
-    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
-    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
-    'auth_type':'private',
-    'credentials': {
-        'user':user,
-        'password':password,
-        },
-    'data':{
-            1:{'source_id':source_id,
-                'destination_id':dest_id,
-                'slot':0,
-                'msg_type':'unit',
-                'msg_format':'motorola',
-                'message':message
-               }
-           }
-    }
-    json_object = json.dumps(msg_xfer, indent = 4)
-    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
+##def send_app_request(url, message, source_id):
+##    #url = url + '/app'
+##    #Load current AUTH token list
+##    auth_file = ast.literal_eval(os.popen('cat ' + auth_token_file).read())
+##    the_token = str(hashlib.md5(str(time()).encode('utf-8')).hexdigest())
+##    new_auth_file = auth_file
+##    new_auth_file.append(the_token)
+##    # Write new list to file
+##    with open(auth_token_file, 'w') as auth_token:
+##        auth_token.write(str(auth_file))
+##        auth_token.close()
+##    app_request = {
+##    'mode':'app',
+##    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
+##    'server_name':CONFIG['DATA_CONFIG']['SERVER_NAME'],
+##    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
+##    'auth_token':the_token,
+##    'data':{
+##            'source_id':source_id,
+##            'slot':0,
+##            'msg_type':'unit',
+##            'msg_format':'motorola',
+##            'message':message
+##            }
+##    }
+##    json_object = json.dumps(app_request, indent = 4)
+##    print(json_object)
+##    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
+##
+##    
+##def send_msg_xfer(url, user, password, message, source_id, dest_id):
+##    url = url + '/api/msg_xfer'
+##    msg_xfer = {
+##    'mode':'msg_xfer',
+##    'system_shortcut':CONFIG['DATA_CONFIG']['MY_SERVER_SHORTCUT'],
+##    'response_url':CONFIG['DATA_CONFIG']['DASHBOARD_URL'] + '/api',
+##    'auth_type':'private',
+##    'credentials': {
+##        'user':user,
+##        'password':password,
+##        },
+##    'data':{
+##            1:{'source_id':source_id,
+##                'destination_id':dest_id,
+##                'slot':0,
+##                'msg_type':'unit',
+##                'msg_format':'motorola',
+##                'message':message
+##               }
+##           }
+##    }
+##    json_object = json.dumps(msg_xfer, indent = 4)
+##    requests.post(url, data=json_object, headers={'Content-Type': 'application/json'})
 
 
-# Send email via SMTP function
-def send_email(to_email, email_subject, email_message):
-    global smtp_server
-    sender_address = email_sender
-    account_password = email_password
-    smtp_server = smtplib.SMTP_SSL(smtp_server, int(smtp_port))
-    smtp_server.login(sender_address, account_password)
-    message = "From: " + aprs_callsign + " D-APRS Gateway\nTo: " + to_email + "\nContent-type: text/html\nSubject: " + email_subject + "\n\n" + '<strong>' + email_subject + '</strong><p>&nbsp;</p><h3>' + email_message + '</h3><p>&nbsp;</p><p>This message was sent to you from a D-APRS gateway operated by <strong>' + aprs_callsign + '</strong>. Do not reply as this gateway is only one way at this time.</p>'
-    smtp_server.sendmail(sender_address, to_email, message)
-    smtp_server.close()
+### Send email via SMTP function
+##def send_email(to_email, email_subject, email_message):
+##    global smtp_server
+##    sender_address = email_sender
+##    account_password = email_password
+##    smtp_server = smtplib.SMTP_SSL(smtp_server, int(smtp_port))
+##    smtp_server.login(sender_address, account_password)
+##    message = "From: " + aprs_callsign + " D-APRS Gateway\nTo: " + to_email + "\nContent-type: text/html\nSubject: " + email_subject + "\n\n" + '<strong>' + email_subject + '</strong><p>&nbsp;</p><h3>' + email_message + '</h3><p>&nbsp;</p><p>This message was sent to you from a D-APRS gateway operated by <strong>' + aprs_callsign + '</strong>. Do not reply as this gateway is only one way at this time.</p>'
+##    smtp_server.sendmail(sender_address, to_email, message)
+##    smtp_server.close()
 
-def generate_apps():
-    global access_systems
-    #local_apps = ast.literal_eval(os.popen('cat ' + access_systems_file).read())
-    public_systems_file = requests.get(CONFIG['DATA_CONFIG']['PUBLIC_APPS_LIST'])
-    public_apps = ast.literal_eval(public_systems_file.text)
-    access_systems = {}
-    #combined = public_apps.items() + local_acess_systems.items()
-    if CONFIG['DATA_CONFIG']['USE_PUBLIC_APPS'] == True:
-        for i in public_apps.items():
-            key = str(i[0])
-            access_systems[key] = i[1]
-    for i in local_apps.items():
-        key = str(i[0])
-        access_systems[key] = i[1]
-    print(access_systems)
-    
-    return access_systems
+##def generate_apps():
+##    global access_systems
+##    #local_apps = ast.literal_eval(os.popen('cat ' + access_systems_file).read())
+##    public_systems_file = requests.get(CONFIG['DATA_CONFIG']['PUBLIC_APPS_LIST'])
+##    public_apps = ast.literal_eval(public_systems_file.text)
+##    access_systems = {}
+##    #combined = public_apps.items() + local_acess_systems.items()
+##    if CONFIG['DATA_CONFIG']['USE_PUBLIC_APPS'] == True:
+##        for i in public_apps.items():
+##            key = str(i[0])
+##            access_systems[key] = i[1]
+##    for i in local_apps.items():
+##        key = str(i[0])
+##        access_systems[key] = i[1]
+##    print(access_systems)
+##    
+##    return access_systems
 
 # Thanks for this forum post for this - https://stackoverflow.com/questions/2579535/convert-dd-decimal-degrees-to-dms-degrees-minutes-seconds-in-python
 
@@ -888,8 +889,8 @@ def process_sms(_rf_src, sms, call_type, system_name):
 ##        message = re.sub('^@|.* M-|','',sms)
 ##        recipient = re.sub('@| M-.*','',sms)
 ##        mailbox_write(get_alias(int_id(_rf_src), subscriber_ids), int_id(_rf_src), time(), message, str(recipient).upper())
-    elif '*REM MAIL' == sms:
-        mailbox_delete(_rf_src)
+##    elif '*REM MAIL' == sms:
+##        mailbox_delete(_rf_src)
         
     elif '*MH' in parse_sms[0]:
         print(parse_sms)
