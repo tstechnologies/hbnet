@@ -54,7 +54,7 @@ import os, ast
 from cryptography.fernet import Fernet
 
 peer_locations = {}
-hbnet_version = '0.0.1-pre_alpha'
+hbnet_version = '0.0.1-pre_pre_alpha'
 
 # Query radioid.net for list of IDs
 def get_ids(callsign):
@@ -774,7 +774,7 @@ def hbnet_web_service():
             for i in mail_all:
                 messages_waiting = messages_waiting + 1
             
-        return dict(global_config={'mode': mode, 'messages': messages_waiting, 'registration_enabled': USER_ENABLE_REGISTER, 'hbnet_version': hbnet_version})
+        return dict(global_config={'mode': mode, 'messages': messages_waiting, 'registration_enabled': USER_ENABLE_REGISTER, 'hbnet_version': hbnet_version, 'allow_web_sms': allow_user_sms})
 
 
     # Serve favicon
@@ -3096,10 +3096,17 @@ FLOOD_TIMEOUT = ''' + str(s.unit_time)
                 <meta http-equiv="refresh" content="1; URL=''' + url + '''/mail/''' + current_user.username + '''" /> '''
                 
             elif request.args.get('send_sms'):
-                sms_que_add(current_user.username, '', 0, int(request.form.get('dmr_id')), 'motorola', 'unit', request.form.get('gateway'), '', current_user.username + ' - ' + request.form.get('message'))
-                content = '''<h3 style="text-align: center;">Message in que.</h3>
-                <p style="text-align: center;">Redirecting in 1 seconds.</p>
-                <meta http-equiv="refresh" content="1; URL=''' + url + '''/mail/''' + current_user.username + '''" /> '''
+                u_role = UserRoles.query.filter_by(user_id=current_user.id).first()
+                print(u_role.role_id)
+                if allow_user_sms == True or u_role.role_id == 1:
+                    sms_que_add(current_user.username, '', 0, int(request.form.get('dmr_id')), 'motorola', 'unit', request.form.get('gateway'), '', current_user.username + ' - ' + request.form.get('message'))
+                    content = '''<h3 style="text-align: center;">Message in que.</h3>
+                    <p style="text-align: center;">Redirecting in 1 seconds.</p>
+                    <meta http-equiv="refresh" content="1; URL=''' + url + '''/mail/''' + current_user.username + '''" /> '''
+                elif allow_user_sms == False:
+                    content = '''<h3 style="text-align: center;">Web SMS disabled. Contact administrator.</h3>
+                    <p style="text-align: center;">Redirecting in 10 seconds.</p>
+                    <meta http-equiv="refresh" content="10; URL=''' + url + '''/mail/''' + current_user.username + '''" /> '''
 
 
 
@@ -7429,106 +7436,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     ##                try:
                     response = jsonify(
                             rules=generate_rules(hblink_req['get_rules']),
-    ##                        OBP=get_OBP(hblink_req['get_config'])
-
                             )
-    ##                except:
-    ##                    message = jsonify(message='Config error')
-    ##                    response = make_response(message, 401)
 
-#################### Work in progress ###########################33
-##            elif 'update_tg' in hblink_req:
-##                if hblink_req['update_tg']:
-##                    print(hblink_req)
-####                    print(hblink_req['data'][0]['SYSTEM'])
-##                    if 'on' == hblink_req['mode']:
-####                        try:
-##                              if hblink_req['dmr_id'] == 0:
-##                                print('id 0')
-####                                print(active_tgs)
-##                                for system in active_tgs[hblink_req['update_tg']].items():
-##    ##                                print(system)
-##    ##                                print('sys')
-##                                    if system[0] == hblink_req['data'][0]['SYSTEM']:
-##                                        print(active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1'])
-####                                        print(hblink_req['data'][2]['tg'])
-##                                        print('---------')
-##                                        print(active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2'])
-##        ##                                print(hblink_req['data'][1]['ts'])
-##                                        if hblink_req['data'][1]['ts'] == 1:
-##        ####                                  print(active_tgs[hblink_req['update_tg']][system[0]][0]['1'])
-##
-##                                            if active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1'] == hblink_req['data'][2]['tg']:
-##                                                pass
-##                                            else:
-##                                                active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1'].append(hblink_req['data'][2]['tg'])
-##        ####                                    active_tgs[hblink_req['update_tg']][system[0]][0]['1'].append(0)
-##                                        if hblink_req['data'][1]['ts'] == 2:
-##                                            if active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2'] == hblink_req['data'][2]['tg']:
-##                                                pass
-##        ####                                    print(active_tgs[hblink_req['update_tg']][system[0]][1]['2'])
-##                                            else:
-##                                                active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2'].append(hblink_req['data'][2]['tg'])
-##                              else:
-##                                  try:
-##                                    print('---------on------------')
-##                                    print(hblink_req['data'])
-##                                    print(active_tgs[hblink_req['update_tg']])
-##                                    print(hblink_req['data'][2]['ts2'])
-##                                    print('-----------------------')
-##        ##                        active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][2]['SYSTEM'] = hblink_req['data'][0]['SYSTEM']
-##        ####                        active_tgs[hblink_req['update_tg']][hblink_req['dmr_id']].update({hblink_req['data'][0]['SYSTEM']: [{1:[hblink_req['data'][1]['ts1']]}, {2:[hblink_req['data'][2]['ts2']]}]}) #.update({[hblink_req['dmr_id']]:hblink_req['data']})
-##                                    if hblink_req['data'][1]['ts1'] not in active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1']:
-##                                        active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1'].append(hblink_req['data'][1]['ts1'])
-##                                        active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][2]['SYSTEM'] = hblink_req['data'][0]['SYSTEM']
-##                                    if hblink_req['data'][2]['ts2'] not in active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2']:
-##                                        print('---0---')
-##                                        print(hblink_req['data'][0]['SYSTEM'])
-##                                        active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][2]['SYSTEM'] = hblink_req['data'][0]['SYSTEM']
-##                                        active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2'].append(hblink_req['data'][2]['ts2'])
-####                                        print('append')
-##        ####                                    active_tgs[hblink_req['update_tg']][system[0]][1]['2'].append(0)
-##        ##                        print(hblink_req['data'][0]['SYSTEM'])
-##
-##    ##                            print(active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']])
-##    ##                            print(active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][2]['2'])
-##    ##                            print(hblink_req['data'][1]['ts2'])
-##        ##                        print(active_tgs[hblink_req['update_tg']])
-##                                  except:
-####                                      active_tgs[hblink_req['update_tg']] = {}
-##                                      pass
-##                                
-####                        except:
-####                            pass
-##
-##                            
-##                    elif 'off' == hblink_req['mode']:
-##                        print('off')
-##                        for system in active_tgs[hblink_req['update_tg']].items():
-##                            print(system)
-##                            if system[0] == hblink_req['data'][0]['SYSTEM']:
-##                                print('yes it is')
-######                                print(system[0])
-######                                print(active_tgs[hblink_req['update_tg']][system[0]])
-##                                if hblink_req['data'][1]['ts'] == 1:
-######                                    print(active_tgs[hblink_req['update_tg']][system[0]][0]['1'])
-##                                    active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][0]['1'].remove(hblink_req['data'][2]['tg'])
-######                                    active_tgs[hblink_req['update_tg']][system[0]][0]['1'].append(0)
-##                                if hblink_req['data'][1]['ts'] == 2:
-######                                    print(active_tgs[hblink_req['update_tg']][system[0]][1]['2'])
-##                                    active_tgs[hblink_req['update_tg']][hblink_req['data'][0]['SYSTEM']][1]['2'].remove(hblink_req['data'][2]['tg'])
-######                                    active_tgs[hblink_req['update_tg']][system[0]][1]['2'].append(0)
-##
-##                                    
-##    
-####                            print()
-####                            print(system)
-####                            print(system[1][2]['SYSTEM'])
-####                        print('off')
-####                        print(hblink_req['data'][1]['ts'])
-####                        print(hblink_req['data'][2]['tg'])
-##                print(active_tgs)
-##                response = 'got it'
         else:
             message = jsonify(message='Authentication error')
             response = make_response(message, 401)

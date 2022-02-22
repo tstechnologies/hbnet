@@ -44,6 +44,10 @@ time_format = '%H:%M:%S - %m/%d/%y'
 # the approval of an admin user before the user can login.
 default_account_state = True
 
+# Allow users to generate and send SMS messages via the web service
+# and API.
+allow_user_sms = True
+
 # Legacy passphrase used in hblink.cfg
 legacy_passphrase = 'passw0rd'
 

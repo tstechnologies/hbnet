@@ -70,7 +70,7 @@
 <div class="row">
   <div class="col-lg-12">
 <p style="text-align: right;"><button data-bs-toggle="collapse" data-bs-target="#compose" class="btn btn-primary">Compose</button></p>
-{% if call_or_get(current_user.has_roles('Admin')) %}
+{% if call_or_get(current_user.has_roles('Admin')) or global_config['allow_web_sms'] == True %}
 <p style="text-align: left;"><button data-bs-toggle="collapse" data-bs-target="#compose_sms" class="btn btn-primary">Send SMS</button></p>
 {% endif %}
 
