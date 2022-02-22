@@ -271,36 +271,8 @@ class OPENBRIDGE(DatagramProtocol):
             
         # Server Data packet, decrypt and process it.
         elif _packet[:4] == SVRD:
-            _d_pkt = decrypt_packet(self._config['ENCRYPTION_KEY'], _packet[4:])
-##            logger.info('SVRD Received: ' + str(_d_pkt))
-            # DMR Data packet, sent via SVRD
-##            if _d_pkt[4:8] == b'DATA':
-##                print('----------------------')
-##                _data = _d_pkt[4:]
-##                _peer_id = _data[11:15]
-##                _seq = _data[4]
-##                _rf_src = _data[5:8]
-##                _dst_id = _data[8:11]
-##                _bits = _data[15]
-##                _slot = 2 if (_bits & 0x80) else 1
-##                #_call_type = 'unit' if (_bits & 0x40) else 'group'
-##                if _bits & 0x40:
-##                    _call_type = 'unit'
-##                elif (_bits & 0x23) == 0x23:
-##                    _call_type = 'vcsbk'
-##                else:
-##                    _call_type = 'group'
-##                _frame_type = (_bits & 0x30) >> 4
-##                _dtype_vseq = (_bits & 0xF) # data, 1=voice header, 2=voice terminator; voice, 0=burst A ... 5=burst F
-##                _stream_id = _data[16:20]
-##                print(_stream_id)
-##
-##                print(_call_type)
-##                self.dmrd_received(_peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
-##            else:
-               
+            _d_pkt = decrypt_packet(self._config['ENCRYPTION_KEY'], _packet[4:])   
             self.svrd_received(_d_pkt[4:8], _d_pkt[8:])
-##            print(ahex(_d_pkt[8:]))
                 
 #************************************************
 #     HB MASTER CLASS
@@ -499,9 +471,6 @@ class HBSYSTEM(DatagramProtocol):
             self._stats['PINGS_SENT'] += 1
             self._stats['PING_OUTSTANDING'] = True
             
-    # Experimental function to return data from hblink.py into bridge.py
-    def dat_test(self):
-        return self._peers
 
     def send_peers(self, _packet):
         for _peer in self._peers:
@@ -639,9 +608,9 @@ class HBSYSTEM(DatagramProtocol):
 
         elif _command == RPTL:    # RPTLogin -- a repeater wants to login
             _peer_id = _data[4:8]
-            print()
-            print((self._config['REG_ACL']))
-            print()
+##            print()
+##            print((self._config['REG_ACL']))
+##            print()
             # Check to see if we've reached the maximum number of allowed peers
             if len(self._peers) < self._config['MAX_PEERS']:
                 # Check for valid Radio ID
@@ -987,6 +956,10 @@ class HBSYSTEM(DatagramProtocol):
                 if self._config['LOOSE'] or _peer_id == self._config['RADIO_ID']: # Validate the Radio_ID unless using loose validation
                     self._stats['CONNECTION'] = 'NO'
                     logger.info('(%s) MSTCL Recieved', self._system)
+
+            elif _command == RPTS:
+                if _data[:7] == RPTSBKN:
+                    logger.info('(%s) Received Site Beacon with Repeater ID: %s', self._system, int_id(_data[7:]))
 
             else:
                 logger.error('(%s) Received an invalid command in packet: %s', self._system, ahex(_data))

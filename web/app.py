@@ -54,7 +54,7 @@ import os, ast
 from cryptography.fernet import Fernet
 
 peer_locations = {}
-hbnet_version = '0.0.1-pre_pre_alpha'
+hbnet_version = 'HWS 0.0.1-pre_pre_alpha'
 
 # Query radioid.net for list of IDs
 def get_ids(callsign):
