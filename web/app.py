@@ -54,6 +54,7 @@ import os, ast
 from cryptography.fernet import Fernet
 
 peer_locations = {}
+hbnet_version = '0.0.1-pre_alpha'
 
 # Query radioid.net for list of IDs
 def get_ids(callsign):
@@ -773,7 +774,7 @@ def hbnet_web_service():
             for i in mail_all:
                 messages_waiting = messages_waiting + 1
             
-        return dict(global_config={'mode': mode, 'messages': messages_waiting, 'registration_enabled': USER_ENABLE_REGISTER})
+        return dict(global_config={'mode': mode, 'messages': messages_waiting, 'registration_enabled': USER_ENABLE_REGISTER, 'hbnet_version': hbnet_version})
 
 
     # Serve favicon
