@@ -1423,9 +1423,12 @@ def aprs_process(packet):
 ##                                print(UNIT_MAP)
                                 # Write function to check UNIT_MAP and see if X amount of time has passed, if time passed, no ACK. This will prevent multiple gateways from
                                 # ACKing. time of 24hrs?
-                                logger.info(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
-                                aprs_send(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
-                                logger.info('Send ACK')
+                                if bytes_3(sms_id) in UNIT_MAP:
+                                    logger.info(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
+                                    aprs_send(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
+                                    logger.info('Send ACK')
+                                else:
+                                    logger.info('Station not seen in 24 hours, not acknowledging')
                         except Exception as e:
                             logger.info(e)
     except Exception as e:
@@ -1761,7 +1764,7 @@ def rule_timer_loop():
     global UNIT_MAP
     logger.debug('(ROUTER) routerHBP Rule timer loop started')
     _now = time()
-    _then = _now - 3600
+    _then = _now - (3600 *24)
     remove_list = []
     for unit in UNIT_MAP:
         if UNIT_MAP[unit][1] < (_then):
