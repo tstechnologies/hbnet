@@ -7062,7 +7062,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
         for i in table_dict.items():
             content = content + '''
 <tr>
-  <td>''' + str(int_id(i[0])) + '''</td>
+  <td><p><a href="https://www.radioid.net/database/view?id=">''' + str(int_id(i[0])) + '''</a></td>
   <td>''' + str((i[1][0])) + '''</td>
   <td>''' + str((timedelta(seconds=svr.unit_time) + datetime.datetime.fromtimestamp(i[1][1])).strftime(time_format)) + '''</td>
 </tr>
