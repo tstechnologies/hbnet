@@ -7065,9 +7065,14 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 '''
 ##        try:
         for i in table_dict.items():
+            try:
+                usr_nm = User.query.filter(User.dmr_ids.ilike('%' + str(int_id(i[0])) + '%')).first()
+                usr_lnk = '''<a href="/edit_user?callsign=''' + str(usr_nm.username) + '''"><button type="button" class="btn btn-success">''' + str(usr_nm.username) + '''</button></a>'''
+            except:
+                usr_lnk = ''
             content = content + '''
 <tr>
-  <td><p><a href="https://www.radioid.net/database/view?id=''' + str(int_id(i[0])) + '''" target="_blank" rel="noopener">''' + str(int_id(i[0])) + '''</a></td>
+  <td><p><a href="https://www.radioid.net/database/view?id=''' + str(int_id(i[0])) + '''" target="_blank" rel="noopener"><button type="button" class="btn btn-warning">''' + str(int_id(i[0])) + '''</button></a><br /><br />''' + usr_lnk + '''</td>
   <td>''' + str((i[1][0])) + '''</td>
   <td>''' + str((timedelta(seconds=svr.unit_time) + datetime.datetime.fromtimestamp(i[1][1])).strftime(time_format)) + '''</td>
 </tr>
