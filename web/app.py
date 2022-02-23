@@ -3600,18 +3600,23 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
             server = _server,
             system_name = _system_name
             )
-        add_sms_mail = MailBox(
-            snd_callsign = _snd_call,
-            rcv_callsign = _rcv_call,
-            message = _msg,
-            time = datetime.datetime.utcnow(),
-            snd_id = _snd_id,
-            rcv_id = _rcv_id,
-            server = _server,
-            system_name = _system_name
-            )
+        # Only add to mailbox if user exists
+        try:
+            usr_nm = User.query.filter(User.dmr_ids.ilike('%' + str(_rcv_id) + '%')).first()
+            add_sms_mail = MailBox(
+                snd_callsign = _snd_call,
+                rcv_callsign = str(usr_nm.username).upper(),
+                message = _msg,
+                time = datetime.datetime.utcnow(),
+                snd_id = _snd_id,
+                rcv_id = _rcv_id,
+                server = _server,
+                system_name = _system_name
+                )
+            db.session.add(add_sms_mail)
+        except:
+            pass
         db.session.add(add_sms)
-        db.session.add(add_sms_mail)
         db.session.commit()
 
     def mailbox_add(_snd_call, _rcv_call, _msg, _snd_id, _rcv_id, _server, _system_name):
@@ -5130,20 +5135,20 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     @roles_required('Admin')
     def test_peer_db():
         if request.args.get('save_mode'):
-            if request.form.get('enabled') == 'true':
+            peer_enabled = False
+            use_acl = False
+            unit_enabled = False
+            peer_loose = True
+            if request.form.get('enabled') == 'True':
                 peer_enabled = True
 ##            if request.form.get('loose') == 'true':
 ##                peer_loose = True
-            if request.form.get('use_acl') == 'true':
+            if request.form.get('use_acl') == 'True':
                 use_acl = True
             if request.form.get('enable_unit') == 'True':
                 unit_enabled = True
 ##            else:
 ##                peer_loose = False
-            peer_enabled = False
-            use_acl = False
-            unit_enabled = False
-            peer_loose = True
 ##            print(request.form.get('enable_unit'))
 ##            print(enable_unit)
             if request.form.get('name_text') == '':
@@ -5202,8 +5207,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 <tr>
 <td style="width: 175.567px;"><strong>&nbsp;Active:</strong></td>
 <td style="width: 399.433px;">&nbsp;<select name="enabled">
-<option value="true">True</option>
-<option value="false">False</option>
+<option value="True">True</option>
+<option value="False">False</option>
 </select></td>
 </tr>
 <tr>
@@ -5414,8 +5419,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 <td style="width: 175.567px;"><strong>&nbsp;Active:</strong></td>
 <td style="width: 399.433px;">&nbsp;<select name="enabled">
 <option value="''' + str(p.enabled) + '''" selected>Current: ''' + str(p.enabled) + '''</option>
-<option value="true">True</option>
-<option value="false">False</option>
+<option value="True">True</option>
+<option value="False">False</option>
 </select></td>
 </tr>
 <tr>

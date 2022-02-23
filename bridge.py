@@ -1116,15 +1116,15 @@ class routerHBP(HBSYSTEM):
             # just make a new one from the HBP header. This is good enough, and it saves lots of time
             else:
                 self.STATUS[_slot]['RX_LC'] = LC_OPT + _dst_id + _rf_src
-        # Download rules
-        if _rf_src not in user_rules:
-            user_rules[_rf_src] = self.name
-        if _rf_src in user_rules:
-##            print('in')
-            if user_rules[_rf_src] != self.name:
-                user_rules[_rf_src] = self.name
-##                print('updated')
-##        print(user_rules)
+##        # Download rules
+##        if _rf_src not in user_rules:
+##            user_rules[_rf_src] = self.name
+##        if _rf_src in user_rules:
+####            print('in')
+##            if user_rules[_rf_src] != self.name:
+##                user_rules[_rf_src] = self.name
+####                print('updated')
+####        print(user_rules)
         for _bridge in BRIDGES:
 ##            print(BRIDGES)
 ##            print(_bridge)

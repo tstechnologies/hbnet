@@ -1419,7 +1419,6 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                         
 ##                        if int_id(_dst_id) == data_id:
                         if int_id(_dst_id) in data_id:
-
                             process_sms(_rf_src, msg_found, _call_type, UNIT_MAP[_rf_src][0])
 ##                        if int_id(_dst_id) != data_id:
                         if int_id(_dst_id) not in data_id:
