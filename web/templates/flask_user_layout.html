@@ -81,8 +81,12 @@
            <i class="bi bi-question-square"></i> Help 
           </a>
           <ul class="dropdown-menu" aria-labelledby="help_menu">
+    {% if global_config['mode'] == 'FULL' or global_config['mode'] == 'DMR_ONLY' %}
             <li><a class="dropdown-item" href="{{url}}/help"><i class="bi bi-question-diamond"></i> General Help </a></li>
+    {% endif %}
+    {% if global_config['mode'] == 'FULL' or global_config['mode'] == 'DASH_ONLY' %}
             <li><a class="dropdown-item" href="{{url}}/data_help"><i class="bi bi-file-bar-graph"></i> Data Help </a></li>
+    {% endif %}
           </ul>
         </li>
 
