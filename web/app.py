@@ -1101,12 +1101,15 @@ def hbnet_web_service():
             for i in id_dict.items():
                 #if i[1] == '':
                 link_num = str(random.randint(1,99999999)).zfill(8) + str(time.time()) + str(random.randint(1,99999999)).zfill(8)
+                fw_link_num = str(random.randint(1,99999999)).zfill(8) + str(time.time()) + str(random.randint(1,99999999)).zfill(8)
                 script_links[i[0]] = link_num
+                print(script_links)
+                print(type(script_links))
                 misc_edit_field_1('script_links', str(script_links), '', '', 0, 0, 0, 0, False, False)
                 content = content + '''
         <div class="card">
   <div class="card-header" style="text-align: center;"><h4>ID: ''' + str(i[0]) + '''</h4></div>
-  <div class="card-body"><pre>cd /root; rpi-rw; curl "<a href="''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''">''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''</a>" >> DMR_Hosts.txt; pistar-update</pre></div>
+  <div class="card-body"><pre>cd /root; rpi-rw; curl "<a href="''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''">''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''</a>" >> DMR_Hosts.txt; curl "<a href="''' + str(url) + '/get_script?fw_rules=yes">''' + str(url) + '''/get_script?fw_rules=yes'</a>" >> ipv4.fw; pistar-update</pre></div>
 </div>
     '''
 #   <div class="card-body"><pre>rpi-rw; wget -O /root/auto_pistar.py "<a href="''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''">''' + str(url) + '/get_script?dmr_id=' + str(i[0]) + '&number=' + str(link_num) + '''</a>"; chmod +x /root/auto_pistar.py; python3 /root/auto_pistar.py; pistar-update</pre></div>
@@ -1711,61 +1714,64 @@ def hbnet_web_service():
 
     @app.route('/get_script')
     def get_script():
-        dmr_id = int(request.args.get('dmr_id'))
-        number = float(request.args.get('number'))
-        #print(type(script_links[dmr_id]))
-        script_l = Misc.query.filter_by(field_1='script_links').first()
-        script_links = ast.literal_eval(script_l.field_2)
-        u = User.query.filter(User.dmr_ids.contains(request.args.get('dmr_id'))).first()
+        if request.args.get('dmr_id'):
+            dmr_id = int(request.args.get('dmr_id'))
+            number = float(request.args.get('number'))
+            #print(type(script_links[dmr_id]))
+            script_l = Misc.query.filter_by(field_1='script_links').first()
+            script_links = ast.literal_eval(script_l.field_2)
+            u = User.query.filter(User.dmr_ids.contains(request.args.get('dmr_id'))).first()
 
-        pub_list = []
-        
-
-        
-        #print(u.dmr_ids)
-
-        if authorized_peer(dmr_id)[1] == 0:
-            passphrase = gen_passphrase(dmr_id)
-        elif authorized_peer(dmr_id)[1] != 0 and isinstance(authorized_peer(dmr_id)[1], int) == True:
-            passphrase = gen_passphrase(dmr_id)
-        elif authorized_peer(dmr_id)[1] == '':
-            passphrase = legacy_passphrase
-        elif authorized_peer(dmr_id)[1] != '' or authorized_peer(dmr_id)[1] != 0:
-            passphrase = authorized_peer(dmr_id)[1]
-        #try:
-        if dmr_id in script_links and number == float(script_links[dmr_id]):
-            script_links.pop(dmr_id)
-            misc_edit_field_1('script_links', str(script_links), '', '', 0, 0, 0, 0, False, False)
+            pub_list = []
             
+
+            
+            #print(u.dmr_ids)
+
+            if authorized_peer(dmr_id)[1] == 0:
+                passphrase = gen_passphrase(dmr_id)
+            elif authorized_peer(dmr_id)[1] != 0 and isinstance(authorized_peer(dmr_id)[1], int) == True:
+                passphrase = gen_passphrase(dmr_id)
+            elif authorized_peer(dmr_id)[1] == '':
+                passphrase = legacy_passphrase
+            elif authorized_peer(dmr_id)[1] != '' or authorized_peer(dmr_id)[1] != 0:
+                passphrase = authorized_peer(dmr_id)[1]
+            #try:
+            if dmr_id in script_links and number == float(script_links[dmr_id]):
+                script_links.pop(dmr_id)
+                misc_edit_field_1('script_links', str(script_links), '', '', 0, 0, 0, 0, False, False)
+                
+                ml = MasterList.query.filter_by(public_list=True).filter_by(active=True).all()
+                pl = ProxyList.query.filter_by(public_list=True).filter_by(active=True).all()
+##                print(ml)
+##                print(pl)
+                for m in ml:
+##                    print(m.name)
+                    sl = ServerList.query.filter_by(name=m.server).first()
+    ##                print(sl.ip)
+                    if m.enable_um == True:
+                        passp = passphrase
+                    pub_list.append([m.server + '_' + m.name, sl.ip, passphrase, m.port])
+                for p in pl:
+                    sl = ServerList.query.filter_by(name=p.server).first()
+                    if p.enable_um == True:
+                        passp = passphrase
+                    pub_list.append([p.server + '_' + p.name, sl.ip, passphrase, p.external_port])
+
+
+                
+                return str(gen_script(dmr_id, pub_list))
+
+        elif request.args.get('fw_rules'):
+            fw_content = ''
             ml = MasterList.query.filter_by(public_list=True).filter_by(active=True).all()
             pl = ProxyList.query.filter_by(public_list=True).filter_by(active=True).all()
-            print(ml)
-            print(pl)
             for m in ml:
-                print(m.name)
-##                print(m.server)
-##                print(m.port)
-##                print(m.enable_um)
-##                print(m.passphrase)
-                sl = ServerList.query.filter_by(name=m.server).first()
-##                print(sl.ip)
-                if m.enable_um == True:
-                    passp = passphrase
-                pub_list.append([m.server + '_' + m.name, sl.ip, passphrase, m.port])
+                fw_content = fw_content + '''iptables -A OUTPUT -p udp --dport ''' + str(m.port) + ''' -j ACCEPT\n'''
             for p in pl:
-                sl = ServerList.query.filter_by(name=p.server).first()
-                if p.enable_um == True:
-                    passp = passphrase
-                pub_list.append([p.server + '_' + p.name, sl.ip, passphrase, p.external_port])
+                fw_content = fw_content + '''iptables -A OUTPUT -p udp --dport ''' + str(p.external_port) + ''' -j ACCEPT\n'''
+            return fw_content
 
-
-            
-            return str(gen_script(dmr_id, pub_list))
-        #except:
-            #else:
-            #content = '<strong>Link used or other error.</strong>'
-            #return content
-            #return render_template('flask_user_layout.html', markup_content = content, logo = logo)
         
 
     def authorized_peer(peer_id):
