@@ -4279,7 +4279,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
             p.enable_um = _enable_um
             p.passphrase = _passphrase
             p.external_proxy = _external_proxy
-            external_port = int(_port)
+            p.external_port = int(_port)
             p.group_hang_time = int(_group_hang_time)
             p.internal_start_port = _int_start_port
             p.internal_stop_port = _int_stop_port
@@ -5672,7 +5672,6 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     <p style="text-align: center;">Redirecting in 3 seconds.</p>
     <meta http-equiv="refresh" content="3; URL=manage_masters" />'''
             elif request.args.get('proxy_save') == 'edit':
-##                print(request.args.get('name'))
                 edit_master('PROXY', request.args.get('name'), request.args.get('server'), aprs_pos, repeat, active, 0, request.form.get('ip'), request.form.get('external_port'), enable_um, request.form.get('passphrase'), request.form.get('group_hangtime'), use_acl, request.form.get('reg_acl'), request.form.get('sub_acl'), request.form.get('ts1_acl'), request.form.get('ts2_acl'), enable_unit, request.form.get('notes'), external_proxy, request.form.get('int_port_start'), request.form.get('int_port_stop'), '', '', '', '', public, request.form.get('other_options'), '', '')
                 content = '''<h3 style="text-align: center;">PROXY changed.</h3>
 <p style="text-align: center;">Redirecting in 3 seconds.</p>
@@ -5797,7 +5796,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 </tr>
 <tr>
 <td><strong>&nbsp;Port:</strong></td>
-<td>&nbsp;<input name="port" type="text" value="62035" /></td>
+<td>&nbsp;<input name="port" type="text" value="62031" /></td>
 </tr>
 <tr>
 <td><strong>&nbsp;Passphrase:</strong></td>
@@ -5805,7 +5804,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 </tr>
 <tr>
 <td><strong>&nbsp;Network ID:</strong></td>
-<td>&nbsp;<input name="network_id" type="text" value="123456789" /></td>
+<td>&nbsp;<input name="network_id" type="text" value="1234567" /></td>
 </tr>
 <tr>
 <td><strong>&nbsp;Target IP:</strong></td>
