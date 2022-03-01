@@ -112,6 +112,12 @@ __email__      = 'kf7eel@qsl.net'
 
 sms_seq_num = 0
 use_csbk = False
+hdr_type = ''
+btf = -1
+ssid = ''
+UNIT_MAP = {}
+PACKET_MATCH = {}
+
 def download_aprs_settings(_CONFIG):
     user_man_url = _CONFIG['WEB_SERVICE']['URL']
     shared_secret = str(sha256(_CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
@@ -493,11 +499,7 @@ def download_config(CONFIG_FILE, cli_file):
 # Headers for GPS by model of radio:
 # AT-D878 - Compressed UDP
 # MD-380 - Unified Data Transport
-hdr_type = ''
-btf = -1
-ssid = ''
-UNIT_MAP = {}
-PACKET_MATCH = {}
+
 
 # From dmr_utils3, modified to decode entire packet. Works for 1/2 rate coded data. 
 def decode_full(_data):
@@ -1736,7 +1738,7 @@ if __name__ == '__main__':
 
     # Initialize the rule timer -- this if for user activated stuff
     rule_timer_task = task.LoopingCall(rule_timer_loop)
-    rule_timer = rule_timer_task.start(30)
+    rule_timer = rule_timer_task.start(10)
     rule_timer.addErrback(loopingErrHandle)
 
     # Used for misc timing events
