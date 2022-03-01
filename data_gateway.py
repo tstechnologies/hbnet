@@ -78,12 +78,12 @@ import os
 try:
     import maidenhead as mh
 except:
-    logger.info('Error importing maidenhead module, make sure it is installed.')
+    logger.error('Error importing maidenhead module, make sure it is installed.')
 # Module for sending email
 try:
     import smtplib
 except:
-    logger.info('Error importing smtplib module, make sure it is installed.')
+    logger.error('Error importing smtplib module, make sure it is installed.')
 
 #Modules for APRS settings
 import ast
@@ -111,7 +111,7 @@ __maintainer__ = 'Eric Craw, KF7EEL'
 __email__      = 'kf7eel@qsl.net'
 
 sms_seq_num = 0
-
+use_csbk = False
 def download_aprs_settings(_CONFIG):
     user_man_url = _CONFIG['WEB_SERVICE']['URL']
     shared_secret = str(sha256(_CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
@@ -121,6 +121,7 @@ def download_aprs_settings(_CONFIG):
     }
     json_object = json.dumps(aprs_check, indent = 4)
     try:
+        logger.info('Downloading APRS settings')
         set_dict = {}
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
         resp = json.loads(req.text)
@@ -142,6 +143,7 @@ def ping(CONFIG):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('Web service ping')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -166,6 +168,7 @@ def send_dash_loc(CONFIG, call, lat, lon, time, comment, dmr_id):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.info('Position sent to web service')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -189,7 +192,9 @@ def send_sms_log(CONFIG, snd_call, rcv_call, msg, rcv_id, snd_id, system_name):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('SMS sent to web service')
     except Exception as e:
+        logger.error('Exception sending SMS to web service.')
         logger.error(e)
 
 def send_bb(CONFIG, callsign, dmr_id, bulletin, system_name):
@@ -207,6 +212,7 @@ def send_bb(CONFIG, callsign, dmr_id, bulletin, system_name):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('Posted to BB')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -231,6 +237,7 @@ def send_mb(CONFIG, _dst_callsign, _src_callsign, message, _dst_dmr_id, _src_dmr
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('Posted to mailbox')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -254,6 +261,7 @@ def send_ss(CONFIG, callsign, message, dmr_id):
         
         try:
             req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+            logger.debug('Social Status sent.')
     ##        resp = json.loads(req.text)
     ##        print(resp)
     ##        return resp['rules']
@@ -273,6 +281,7 @@ def send_unit_table(CONFIG, _data):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('Sent UNIT table')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -291,13 +300,13 @@ def send_sms_que_req(CONFIG):
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
         resp = json.loads(req.text)
-        print(resp)
+        logger.debug(resp)
         return resp['que']
     except Exception as e:
+        logger.error('Exception with SMS que from web service.')
         logger.error(e)
 
 def send_sms_cmd(CONFIG, _rf_id, _cmd):
-    print('ssnd rmt cmd')
     user_man_url = CONFIG['WEB_SERVICE']['URL']
     shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
     sms_cmd_data = {
@@ -311,6 +320,7 @@ def send_sms_cmd(CONFIG, _rf_id, _cmd):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.info('Sent SMS command to web service')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['que']
@@ -321,6 +331,7 @@ def send_sms_cmd(CONFIG, _rf_id, _cmd):
 # Function to download config
 def download_config(CONFIG_FILE, cli_file):
 ##    global aprs_callsign
+    logger.info('Downloading config from web service...')
     user_man_url = CONFIG_FILE['WEB_SERVICE']['URL']
     shared_secret = str(sha256(CONFIG_FILE['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
     config_check = {
@@ -437,7 +448,7 @@ def download_config(CONFIG_FILE, cli_file):
                 for o in gateway_options:
 ##                    print(o)
                     final_options = o.split('=')
-                    print(final_options)
+##                    print(final_options)
                     if final_options[0] == 'aprs_login_call':
                         corrected_config['DATA_CONFIG']['APRS_LOGIN_CALL'] = final_options[1].upper()
                     if final_options[0] == 'aprs_login_passcode':
@@ -470,7 +481,7 @@ def download_config(CONFIG_FILE, cli_file):
                         corrected_config['DATA_CONFIG']['IGATE_BEACON_LONGITUDE'] = final_options[1]
                         
                 
-        print(corrected_config['SYSTEMS'])
+##        print(corrected_config['SYSTEMS'])
         return corrected_config
     # For exception, write blank dict
     except requests.ConnectionError:
@@ -525,18 +536,20 @@ def header_ID(_data):
 
 def aprs_send(packet):
     if 'N0CALL' in aprs_callsign:
-        logger.info('APRS callsighn set to N0CALL, packet not sent.')
+        logger.info('APRS callsign set to N0CALL, packet not sent.')
         pass
     else:
         AIS.sendall(packet)
         logger.info('Packet sent to APRS-IS.')
+
+            
 
 def dashboard_loc_write(call, lat, lon, time, comment, dmr_id):
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         send_dash_loc(CONFIG, call, lat, lon, time, comment, dmr_id)
         logger.info('Sent to web service/dashboard')
     else:
-        logger.info('Web service/dashboard not enabled.')
+        logger.error('Web service/dashboard not enabled.')
 
     
 def dashboard_bb_write(call, dmr_id, time, bulletin, system_name):
@@ -551,7 +564,7 @@ def dashboard_sms_write(snd_call, rcv_call, rcv_dmr_id, snd_dmr_id, sms, time, s
         send_sms_log(CONFIG, snd_call, rcv_call, sms, rcv_dmr_id, snd_dmr_id, system_name)
         logger.info('Sent to web service/dashboard')
     else:
-        logger.info('Web service/dashboard not enabled.')
+        logger.errir('Web service/dashboard not enabled.')
 
 
 
@@ -560,7 +573,7 @@ def mailbox_write(call, dmr_id, time, message, recipient):
         send_mb(CONFIG, call, recipient, message, 0, 0, 'APRS-IS')
 
     else:
-        logger.info('Web service/dashboard not enabled.')
+        logger.error('Web service/dashboard not enabled.')
 
 # Thanks for this forum post for this - https://stackoverflow.com/questions/2579535/convert-dd-decimal-degrees-to-dms-degrees-minutes-seconds-in-python
 
@@ -579,12 +592,12 @@ def user_setting_write(dmr_id, setting, value, call_type):
             send_sms_cmd(CONFIG, dmr_id, 'APRS-' + setting + '=' + str(value))
         if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:
    # Open file and load as dict for modification
-            logger.info(setting.upper())
+            logger.debug(setting.upper())
             with open(user_settings_file, 'r') as f:
     ##            if f.read() == '{}':
     ##                user_dict = {}
                 user_dict = ast.literal_eval(f.read())
-                logger.info('Current settings: ' + str(user_dict))
+                logger.debug('Current settings: ' + str(user_dict))
                 if dmr_id not in user_dict:
                     user_dict[dmr_id] = [{'call': str(get_alias((dmr_id), subscriber_ids))}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': ''}, {'APRS': False}]
                 if setting.upper() == 'ICON':
@@ -628,11 +641,10 @@ def user_setting_write(dmr_id, setting, value, call_type):
                 packet_assembly = ''
             
 # Process SMS, do something bases on message
-
 def process_sms(_rf_src, sms, call_type, system_name):
-    logger.info(call_type)
     parse_sms = sms.split(' ')
-    logger.info(parse_sms)
+    logger.debug(parse_sms)
+    logger.debug(call_type)
     # Social Status function
     if '*SS' == parse_sms[0]:
         s = ' '
@@ -684,7 +696,6 @@ def process_sms(_rf_src, sms, call_type, system_name):
 
         
     elif '*MH' in parse_sms[0]:
-        print(parse_sms)
         grid_square = parse_sms[1]
         if len(grid_square) < 6:
             pass
@@ -704,8 +715,8 @@ def process_sms(_rf_src, sms, call_type, system_name):
             #logger.info(lat_dir)
             aprs_lat = str(str(re.sub('\..*|-', '', str(lat[0]))).zfill(2) + str(re.sub('\..*', '', str(lat[1])).zfill(2) + '.')) + '  ' + lat_dir
             aprs_lon = str(str(re.sub('\..*|-', '', str(lon[0]))).zfill(3) + str(re.sub('\..*', '', str(lon[1])).zfill(2) + '.')) + '  ' + lon_dir
-        logger.info('Latitude: ' + str(aprs_lat))
-        logger.info('Longitude: ' + str(aprs_lon))
+        logger.debug('Latitude: ' + str(aprs_lat))
+        logger.debug('Longitude: ' + str(aprs_lon))
         # 14FRS2013 simplified and moved settings retrieval
         user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())	
         if int_id(_rf_src) not in user_settings:	
@@ -730,18 +741,18 @@ def process_sms(_rf_src, sms, call_type, system_name):
                 comment = user_settings[int_id(_rf_src)][3]['comment']	
         aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(aprs_lat) + icon_table + str(aprs_lon) + icon_icon + '/' + str(comment)
         logger.info(aprs_loc_packet)
-        logger.info('User comment: ' + comment)
-        logger.info('User SSID: ' + ssid)
-        logger.info('User icon: ' + icon_table + icon_icon)
+        logger.debug('User comment: ' + comment)
+        logger.debug('User SSID: ' + ssid)
+        logger.debug('User icon: ' + icon_table + icon_icon)
         try:
             aprslib.parse(aprs_loc_packet)
             aprs_send(aprs_loc_packet)
             dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, aprs_lat, aprs_lon, time(), comment, int_id(_rf_src))
-            #logger.info('Sent manual position to APRS')
+            logger.info('Sent maidenhed position to APRS')
         except Exception as error_exception:
-            logger.info('Exception. Not uploaded')
-            logger.info(error_exception)
-            logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
+            logger.error('Exception. Not uploaded')
+            logger.error(error_exception)
+            logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
         packet_assembly = ''
           
 
@@ -760,15 +771,15 @@ def process_sms(_rf_src, sms, call_type, system_name):
         try:
             if user_settings[int_id(_rf_src)][5]['APRS'] == True:
                 aprs_msg_pkt = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + str(ssid) + '>APHBL3,TCPIP*::' + str(aprs_dest).ljust(9).upper() + ':' + aprs_msg[0:73]
-                logger.info(aprs_msg_pkt)
+                logger.info('DMR User: ' + str(int_id(_rf_src)) + ' sending APRS message to ' + str(aprs_dest).ljust(9).upper())
+                logger.debug(aprs_msg_pkt)
                 try:
                     aprslib.parse(aprs_msg_pkt)
                     aprs_send(aprs_msg_pkt)
-                    #logger.info('Packet sent.')
                 except Exception as error_exception:
-                    logger.info('Error uploading MSG packet.')
-                    logger.info(error_exception)
-                    logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
+                    logger.error('Error sending message packet.')
+                    logger.error(error_exception)
+                    logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
             else:
                 if call_type == 'unit':
                     send_sms(False, int_id(_rf_src), 9, 9, 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
@@ -778,6 +789,7 @@ def process_sms(_rf_src, sms, call_type, system_name):
         except Exception as e:
             if call_type == 'unit':
                     send_sms(False, int_id(_rf_src), 9, 9, 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
+                    logger.error('User APRS messaging disabled.')
 ##            if call_type == 'vcsbk':
 ##                send_sms(False, 9, 9, 9, 'group',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
 
@@ -822,7 +834,6 @@ def create_crc32(fragment_input):
     lst_index = 0
     crc_string = ''
     for i in (word_list):
-        #print(lst_index)
         if lst_index % 2 == 0:
             crc_string =  crc_string + word_list[lst_index + 1]
             #print(crc_string)
@@ -844,7 +855,7 @@ def create_crc32(fragment_input):
     #crc = crc.zfill(8)
     crc = crc.ljust(8, '0')
     # Return original data and append CRC32
-    print('Output: ' + fragment_input + crc)
+    logger.debug('CRC32 Output: ' + fragment_input + crc)
     return fragment_input + crc
 
 def create_crc16_csbk(fragment_input):
@@ -857,16 +868,19 @@ def csbk_gen(to_id, from_id):
     for block in csbk_lst:
         block = block + to_id + from_id
         block  = create_crc16_csbk(block)
-        print(block)
         send_seq_list = send_seq_list + block
-        print(send_seq_list)
     return send_seq_list
 
 def mmdvm_encapsulate(dst_id, src_id, peer_id, _seq, _slot, _call_type, _dtype_vseq, _stream_id, _dmr_data):
     signature = 'DMRD'
     # needs to be in bytes
     frame_type = 0x10 #bytes_2(int(10))
-    #print((frame_type))
+    if isinstance(dst_id, str) == False:
+        dst_id = str(hex(dst_id))[2:].zfill(6)
+    if isinstance(src_id, str) == False:
+        src_id = str(hex(src_id))[2:].zfill(6)
+    if isinstance(peer_id, str) == False:
+        peer_id = str(hex(peer_id))[2:].zfill(8)  
     dest_id = bytes_3(int(dst_id, 16))
     #print(ahex(dest_id))
     source_id = bytes_3(int(src_id, 16))
@@ -972,21 +986,6 @@ def create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string):
             mmdvm_send_seq.append(the_mmdvm_pkt)
             cap_in = cap_in + 1
             
-##        if bytes.fromhex(dst_id) in UNIT_MAP:
-##            logger.info('Sending SMS packet to ' + str(UNIT_MAP[bytes.fromhex(dst_id)][0]))
-##            print(the_mmdvm_pkt)
-##            print(type(the_mmdvm_pkt))
-##            systems[UNIT_MAP[bytes.fromhex(dst_id)][0]].send_system(the_mmdvm_pkt)
-##        else:
-##            for s in CONFIG['SYSTEMS'].items():
-##                if 'FREEDMR' in s[1]['OTHER_OPTIONS']:
-####                    systems[s[0]].send_system(b'SVRDDATA' + the_mmdvm_pkt)
-##                    systems[s[0]].send_system(b'DMRF' + the_mmdvm_pkt)
-##                else:
-##                    systems[s[0]].send_system(the_mmdvm_pkt)
-##                logger.info('Sending SMS packet to ' + str(s[0]))
-
-            
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:  
         with open('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + str(random.randint(1000, 9999)) + '.mmdvm_seq', "w") as packet_write_file:
             packet_write_file.write(str(mmdvm_send_seq))
@@ -1039,14 +1038,17 @@ def sms_headers(to_id, from_id):
     header = ipv4[:20] + ipv4_chk_sum + ipv4[24:] + '0fa70fa700da000000d0a00081040d000a'
     return header
 
-def format_sms(msg, to_id, from_id):
+def format_sms(msg, to_id, from_id, use_header = True):
     msg_bytes = str.encode(msg)
     encoded = "".join([str('00' + x) for x in re.findall('..',bytes.hex(msg_bytes))] )
     final = encoded
     while len(final) < 400:
         final = final + '002e'
     final = final + '0000000000000000000000'
-    headers = sms_headers(to_id, from_id)
+    if use_header == False:
+        headers = ''
+    if use_header == True:
+        headers = sms_headers(to_id, from_id)
     return headers + final
 
 def gen_header(to_id, from_id, call_type):
@@ -1063,6 +1065,7 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
     to_id = str(hex(to_id))[2:].zfill(6)
     from_id = str(hex(from_id))[2:].zfill(6)
     peer_id = str(hex(peer_id))[2:].zfill(8)
+    ascii_call_type = call_type
     if call_type == 'unit':
         call_type = 1
         slot = snd_slot
@@ -1084,82 +1087,80 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
         slot = snd_slot
     if csbk == True:
         use_csbk = True
-##        if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'] == 'OPENBRIDGE':
-##            print('OBP')
-##        create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, csbk_gen(to_id, from_id) + create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(msg, to_id, from_id)))
 
-  # We know where the user is
-    if bytes.fromhex(to_id) in UNIT_MAP:
-        print('yay')
-##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
-        if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                slot = 0
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                for d in snd_seq_lst:
-                    systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
-                logger.info('Sending on TS: ' + str(slot))
-        elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                for d in snd_seq_lst:
-                    systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
-                logger.info('Sending on TS: ' + str(slot))
-  # We don't know where the user is
-    elif bytes.fromhex(to_id) not in UNIT_MAP:
-        for s in CONFIG['SYSTEMS']:
-            if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                slot = 0
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                for d in snd_seq_lst:
-                    systems[s].send_system(d)
-                logger.info('User not in map. Sending on TS: ' + str(slot))
-            elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                for d in snd_seq_lst:
-                    systems[s].send_system(d)
-                logger.info('User not in map. Sending on TS: ' + str(slot))
+    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+    
+    send_to_user(to_id, snd_seq_lst, int(slot), call_type = 'unit')
+
+# Take fully formatted list of sequenced MMDVM packets and send
+def send_to_user(to_id, seq_lst, slot, call_type = 'unit'):
+    if call_type == 'unit':
+        # We know where the user is
+        if bytes.fromhex(to_id) in UNIT_MAP:
+            logger.debug('User in UNIT map.')
+    ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
+            if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                    slot = 0
+                    for d in seq_lst:
+                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                    logger.debug('Sending on TS: ' + str(slot + 1))
+            elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                    for d in seq_lst:
+                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                    logger.debug('Sending on TS: ' + str(slot + 1))
+      # We don't know where the user is
+        elif bytes.fromhex(to_id) not in UNIT_MAP:
+            for s in CONFIG['SYSTEMS']:
+                if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                    slot = 0
+                    for d in seq_lst:
+                        systems[s].send_system(d)
+                    logger.debug('User not in map. Sending on TS: ' + str(slot + 1))
+                elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                    for d in seq_lst:
+                        systems[s].send_system(d)
+                    logger.debug('User not in map. Sending on TS: ' + str(slot + 1))
 
 def aprs_process(packet):
-    print(aprslib.parse(packet))
+##    logger.debug(aprslib.parse(packet))
     try:
         if 'addresse' in aprslib.parse(packet):
-            #print(aprslib.parse(packet))
+##            logger.debug('Message packet detected')
+##            logger.debug(aprslib.parse(packet))
             recipient = re.sub('-.*','', aprslib.parse(packet)['addresse'])
             recipient_ssid = re.sub('.*-','', aprslib.parse(packet)['addresse']) 
             if recipient == '':
                 pass
             else:
                 user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
+##                logger.debug('Open user settings to see if this message is for us...')
                 for i in user_settings.items():
                     sms_id = i[0]
-                    print(sms_id)
                     ssid = i[1][1]['ssid']
                     if i[1][1]['ssid'] == '':
                         ssid = user_ssid
                     if recipient in i[1][0]['call'] and i[1][5]['APRS'] == True and recipient_ssid in ssid:
-                        logger.info(aprslib.parse(packet)['from'])
+                        logger.debug('Received APRS message from ' + aprslib.parse(packet)['from'] + '. Going to ' + i[1][0]['call'])
+                        logger.info('Received APRS message to ' + i[1][0]['call'] + ', sending via SMS and writing to inbox.')
                         mailbox_write(re.sub('-.*','', aprslib.parse(packet)['addresse']), aprslib.parse(packet)['from'], time(), 'From APRS-IS: ' + aprslib.parse(packet)['message_text'], aprslib.parse(packet)['from'])
                         send_sms(False, sms_id, 9, 9, 'unit', str('APRS / ' + str(aprslib.parse(packet)['from']) + ': ' + aprslib.parse(packet)['message_text']))
-##                        print(UNIT_MAP[bytes_3(sms_id)][1])
-##                        print(type(UNIT_MAP[bytes_3(sms_id)][1]))
-##                        print(float(datetime.datetime.utcnow().strftime('%s')) - UNIT_MAP[bytes_3(sms_id)][1])
-##
-##                        if float(datetime.datetime.utcnow().strftime('%s')) - UNIT_MAP[bytes_3(sms_id)][1] < 60:
                         try:
                             if 'msgNo' in aprslib.parse(packet):
-                                #sleep(1)
-##                                print(UNIT_MAP)
+                                logger.debug('Message has a message number, sending ACK...')
                                 # Write function to check UNIT_MAP and see if X amount of time has passed, if time passed, no ACK. This will prevent multiple gateways from
                                 # ACKing. time of 24hrs?
                                 if bytes_3(sms_id) in UNIT_MAP:
                                     logger.info(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
                                     aprs_send(str(aprslib.parse(packet)['addresse']) + '>APHBL3,TCPIP*:' + ':' + str(aprslib.parse(packet)['from'].ljust(9)) +':ack' + str(aprslib.parse(packet)['msgNo']))
-                                    logger.info('Send ACK')
+                                    logger.debug('Sent ACK')
                                 else:
-                                    logger.info('Station not seen in 24 hours, not acknowledging')
+                                    logger.debug('Station not seen in 24 hours, no ACK.')
                         except Exception as e:
+                            logger.debug('Exception with ACK.')
                             logger.info(e)
     except Exception as e:
-        logger.info(e)
+        logger.error('Exception while processing APRS packet...')
+        logger.error(e)
 
 # the APRS RX process
 def aprs_rx(aprs_rx_login, aprs_passcode, aprs_server, aprs_port, aprs_filter, user_ssid):
@@ -1170,12 +1171,12 @@ def aprs_rx(aprs_rx_login, aprs_passcode, aprs_server, aprs_port, aprs_filter, u
     try:
         if 'N0CALL' in aprs_callsign:
             logger.info()
-            logger.info('APRS callsighn set to N0CALL, not connecting to APRS-IS')
+            logger.info('APRS callsign set to N0CALL, not connecting to APRS-IS')
             logger.info()
             pass
         else:
             AIS.connect()
-            print('Connecting to APRS-IS')
+            logger.info('Connecting to APRS-IS')
             if int(CONFIG['DATA_CONFIG']['IGATE_BEACON_TIME']) == 0:
                    logger.info('APRS beacon disabled')
             if int(CONFIG['DATA_CONFIG']['IGATE_BEACON_TIME']) != 0:
@@ -1183,14 +1184,17 @@ def aprs_rx(aprs_rx_login, aprs_passcode, aprs_server, aprs_port, aprs_filter, u
                 aprs_beacon.start(int(CONFIG['DATA_CONFIG']['IGATE_BEACON_TIME'])*60)
             AIS.consumer(aprs_process, raw=True, immortal=False)
     except Exception as e:
-        logger.info(e)
+        logger.error('Exception, attempting to connect to server...')
+        logger.error(e)
+        AIS.connect()
+
         
 def aprs_beacon_send():
-    print(CONFIG['DATA_CONFIG'])
+    logger.debug('Sending iGate APRS beacon...')
     beacon_packet = CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL'] + '>APHBL3,TCPIP*:!' + CONFIG['DATA_CONFIG']['IGATE_BEACON_LATITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][0]) + CONFIG['DATA_CONFIG']['IGATE_BEACON_LONGITUDE'] + str(CONFIG['DATA_CONFIG']['IGATE_BEACON_ICON'][1]) + '/' + CONFIG['DATA_CONFIG']['IGATE_BEACON_COMMENT']
     aprslib.parse(beacon_packet)
     aprs_send(beacon_packet)
-    logger.info(beacon_packet)
+    logger.debug(beacon_packet)
 
 ##### DMR data function ####
 def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, mirror = False):
@@ -1199,8 +1203,8 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
     #logger.info(_dtype_vseq)
     #logger.info(_call_type)
     #logger.info(_frame_type)
-    print(int_id(_stream_id))
-    print((_seq))
+##    print(int_id(_stream_id))
+##    print((_seq))
     logger.info(strftime('%H:%M:%S - %m/%d/%y'))
     #logger.info('Special debug for developement:')
     logger.info(ahex(bptc_decode(_data)))
@@ -1277,10 +1281,11 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                     if user_settings[int_id(_rf_src)][3]['comment'] != '':	
                         comment = user_settings[int_id(_rf_src)][3]['comment']
                 aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(aprs_lat) + icon_table + str(aprs_lon) + icon_icon + '/' + str(comment)
-                logger.info(aprs_loc_packet)
-                logger.info('User comment: ' + comment)
-                logger.info('User SSID: ' + ssid)
-                logger.info('User icon: ' + icon_table + icon_icon)
+                logger.debug(aprs_loc_packet)
+                logger.debug('User comment: ' + comment)
+                logger.debug('User SSID: ' + ssid)
+                logger.debug('User icon: ' + icon_table + icon_icon)
+                logger.info('APRS position generated from MD-380 type radiuo')
                 # Attempt to prevent malformed packets from being uploaded.
                 try:
                     aprslib.parse(aprs_loc_packet)
@@ -1292,9 +1297,9 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                         dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, aprs_lat, aprs_lon, time(), comment, int_id(_rf_src))
                     #logger.info('Sent APRS packet')
                 except Exception as error_exception:
-                    logger.info('Error. Failed to send packet. Packet may be malformed.')
-                    logger.info(error_exception)
-                    logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
+                    logger.error('Error. Failed to send packet. Packet may be malformed.')
+                    logger.error(error_exception)
+                    logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
                 udt_block = 1
                 hdr_type = ''
         else:
@@ -1308,7 +1313,7 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
             global btf, hdr_start
             hdr_start = str(header_ID(_data))
             logger.info('Header from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)))
-            logger.info(ahex(bptc_decode(_data)))
+            logger.debug(ahex(bptc_decode(_data)))
             logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
             btf = ba2num(bptc_decode(_data)[65:72])
             # Try resetting packet_assembly
@@ -1331,101 +1336,122 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
             # Use block 0 as trigger. $GPRMC must also be in string to indicate NMEA.
             # This triggers the APRS upload
             if btf == 0:
-                
                 final_packet = str(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly)).tobytes().decode('utf-8', 'ignore'))
                 sms_hex = str(ba2hx(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly))))
                 sms_hex_string = re.sub("b'|'", '', str(sms_hex))
-                print(sms_hex_string)
-                #NMEA GPS sentence
-                if '$GPRMC' in final_packet or '$GNRMC' in final_packet:
-                    logger.info(final_packet + '\n')
-                    # Eliminate excess bytes based on NMEA type
-                    # GPRMC
-                    if 'GPRMC' in final_packet:
-                        logger.info('GPRMC location')
-                        #nmea_parse = re.sub('A\*.*|.*\$', '', str(final_packet))
-                        nmea_parse = re.sub('A\*.*|.*\$|\n.*', '', str(final_packet))
-                    # GNRMC
-                    if 'GNRMC' in final_packet:
-                        logger.info('GNRMC location')
-                        nmea_parse = re.sub('.*\$|\n.*|V\*.*', '', final_packet)
-                    loc = pynmea2.parse(nmea_parse, check=False)
-                    logger.info('Latitude: ' + str(loc.lat) + str(loc.lat_dir) + ' Longitude: ' + str(loc.lon) + str(loc.lon_dir) + ' Direction: ' + str(loc.true_course) + ' Speed: ' + str(loc.spd_over_grnd) + '\n')
-                    if mirror == False:
-                        try:
-                            # Begin APRS format and upload
-                            # Disable opening file for reading to reduce "collision" or reading and writing at same time.
-                            # 14FRS2013 simplified and moved settings retrieval
-                            user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
-                            print(user_settings)
-                            if int_id(_rf_src) not in user_settings:	
-                                ssid = str(user_ssid)	
-                                icon_table = '/'	
-                                icon_icon = '['	
-                                comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src)) 	
-                            else:	
-                                if user_settings[int_id(_rf_src)][1]['ssid'] == '':	
-                                    ssid = user_ssid	
-                                if user_settings[int_id(_rf_src)][3]['comment'] == '':	
-                                    comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))	
-                                if user_settings[int_id(_rf_src)][2]['icon'] == '':	
+                # Filter out ARS
+                # Look for port 4005 twice, and 'hello' - 000cf0, and UDP header in first 16 characters
+##                if sms_hex_string[40:48] == '0fa50fa5':
+                logger.debug('Hexadecimal data: ' + sms_hex_string)
+                if '0fa50fa5' in sms_hex_string and '4011' in sms_hex_string[:20]:
+                    logger.info('Motorola ARS packet detected')
+                    logger.info('Protocol not supported yet.')
+                    if '000cf0' in sms_hex_string:
+                        logger.info('Received ARS "hello"')
+##                        print('attempt response')
+##                        #create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string)
+####                        h_string = '4501002a04300000401159a00c23e0440d00238b0fa50fa50016308e000cf02007323335313137320000000015a36e7b'
+####                        h_string = '4501002a04300000401159a00c23e0440d00238b0fa50fa50016308e000cf02007323335313137320000000000000000'
+####                        print(sms_hex_string[:-8])
+####                        print('gen - ' + str(create_crc32(sms_hex_string[:-8])))
+####                        print('format sms - ' + str(format_sms(sms_hex_string[:-8], (int_id(_rf_src)), 9099, False)))
+##                        print('---')
+##                        #024200238b23e0448400a14c
+##                        #024223E04400238B8400
+###                        tst_resp = '4501002a065300004011577d0d00238b0c23e0440fa50fa50016308e0002bf0107323335313137320000000000000000'
+##                        tst_resp = '4501002a065300004011577d0d00238b0c23e0440fa50fa50016308e0002bf01'
+##                        ars_seq = create_sms_seq(int_id(_rf_src), 9099, 9099, _slot, 1, create_crc16_csbk('024223E04400238B8400') + create_crc32(tst_resp)) #sms_hex_string[:-8]))
+##                        print()
+##                        print(ars_seq)
+##                        send_to_user(int_id(_rf_src), ars_seq, _slot, _call_type)
+                else:
+                    #NMEA GPS sentence
+                    if '$GPRMC' in final_packet or '$GNRMC' in final_packet:
+                        logger.debug(final_packet + '\n')
+                        # Eliminate excess bytes based on NMEA type
+                        # GPRMC
+                        if 'GPRMC' in final_packet:
+                            logger.debug('GPRMC location')
+                            #nmea_parse = re.sub('A\*.*|.*\$', '', str(final_packet))
+                            nmea_parse = re.sub('A\*.*|.*\$|\n.*', '', str(final_packet))
+                        # GNRMC
+                        if 'GNRMC' in final_packet:
+                            logger.debug('GNRMC location')
+                            nmea_parse = re.sub('.*\$|\n.*|V\*.*', '', final_packet)
+                        loc = pynmea2.parse(nmea_parse, check=False)
+                        logger.debug('Latitude: ' + str(loc.lat) + str(loc.lat_dir) + ' Longitude: ' + str(loc.lon) + str(loc.lon_dir) + ' Direction: ' + str(loc.true_course) + ' Speed: ' + str(loc.spd_over_grnd) + '\n')
+                        if mirror == False:
+                            try:
+                                # Begin APRS format and upload
+                                # Disable opening file for reading to reduce "collision" or reading and writing at same time.
+                                # 14FRS2013 simplified and moved settings retrieval
+                                user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())
+                                logger.debug(user_settings)
+                                if int_id(_rf_src) not in user_settings:	
+                                    ssid = str(user_ssid)	
                                     icon_table = '/'	
                                     icon_icon = '['	
-                                if user_settings[int_id(_rf_src)][2]['icon'] != '':	
-                                    icon_table = user_settings[int_id(_rf_src)][2]['icon'][0]	
-                                    icon_icon = user_settings[int_id(_rf_src)][2]['icon'][1]	
-                                if user_settings[int_id(_rf_src)][1]['ssid'] != '':	
-                                    ssid = user_settings[int_id(_rf_src)][1]['ssid']	
-                                if user_settings[int_id(_rf_src)][3]['comment'] != '':	
-                                    comment = user_settings[int_id(_rf_src)][3]['comment']	
-                            aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(loc.lat[0:7]) + str(loc.lat_dir) + icon_table + str(loc.lon[0:8]) + str(loc.lon_dir) + icon_icon + str(round(loc.true_course)).zfill(3) + '/' + str(round(loc.spd_over_grnd)).zfill(3) + '/' + str(comment)
-                            logger.info(aprs_loc_packet)
-                            logger.info('User comment: ' + comment)
-                            logger.info('User SSID: ' + ssid)
-                            logger.info('User icon: ' + icon_table + icon_icon)
-                        except Exception as error_exception:
-                            logger.info('Error or user settings file not found, proceeding with default settings.')
-                            aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + str(user_ssid) + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(loc.lat[0:7]) + str(loc.lat_dir) + '/' + str(loc.lon[0:8]) + str(loc.lon_dir) + '[' + str(round(loc.true_course)).zfill(3) + '/' + str(round(loc.spd_over_grnd)).zfill(3) + '/' + aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))
-                            logger.info(error_exception)
-                            logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
-                        try:
-                        # Try parse of APRS packet. If it fails, it will not upload to APRS-IS
-                            aprslib.parse(aprs_loc_packet)
-                        # Float values of lat and lon. Anything that is not a number will cause it to fail.
-                            float(loc.lat)
-                            float(loc.lon)
+                                    comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src)) 	
+                                else:	
+                                    if user_settings[int_id(_rf_src)][1]['ssid'] == '':	
+                                        ssid = user_ssid	
+                                    if user_settings[int_id(_rf_src)][3]['comment'] == '':	
+                                        comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))	
+                                    if user_settings[int_id(_rf_src)][2]['icon'] == '':	
+                                        icon_table = '/'	
+                                        icon_icon = '['	
+                                    if user_settings[int_id(_rf_src)][2]['icon'] != '':	
+                                        icon_table = user_settings[int_id(_rf_src)][2]['icon'][0]	
+                                        icon_icon = user_settings[int_id(_rf_src)][2]['icon'][1]	
+                                    if user_settings[int_id(_rf_src)][1]['ssid'] != '':	
+                                        ssid = user_settings[int_id(_rf_src)][1]['ssid']	
+                                    if user_settings[int_id(_rf_src)][3]['comment'] != '':	
+                                        comment = user_settings[int_id(_rf_src)][3]['comment']	
+                                aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(loc.lat[0:7]) + str(loc.lat_dir) + icon_table + str(loc.lon[0:8]) + str(loc.lon_dir) + icon_icon + str(round(loc.true_course)).zfill(3) + '/' + str(round(loc.spd_over_grnd)).zfill(3) + '/' + str(comment)
+                                logger.debug(aprs_loc_packet)
+                                logger.debug('User comment: ' + comment)
+                                logger.debug('User SSID: ' + ssid)
+                                logger.debug('User icon: ' + icon_table + icon_icon)
+                            except Exception as error_exception:
+                                logger.error('Error or user settings file not found, proceeding with default settings.')
+                                aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + str(user_ssid) + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(loc.lat[0:7]) + str(loc.lat_dir) + '/' + str(loc.lon[0:8]) + str(loc.lon_dir) + '[' + str(round(loc.true_course)).zfill(3) + '/' + str(round(loc.spd_over_grnd)).zfill(3) + '/' + aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))
+                                logger.error(error_exception)
+                                logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
+                            logger.info('APRS position packet generated')
+                            try:
+                            # Try parse of APRS packet. If it fails, it will not upload to APRS-IS
+                                aprslib.parse(aprs_loc_packet)
+                            # Float values of lat and lon. Anything that is not a number will cause it to fail.
+                                float(loc.lat)
+                                float(loc.lon)
+        ##                        if int_id(_dst_id) == data_id:
+                                if int_id(_dst_id) in data_id:
+                                    aprs_send(aprs_loc_packet)
+                                    dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, str(loc.lat[0:7]) + str(loc.lat_dir), str(loc.lon[0:8]) + str(loc.lon_dir), time(), comment, int_id(_rf_src))
+                            except Exception as error_exception:
+                                logger.error('Failed to parse packet. Packet may be deformed. Not uploaded.')
+                                logger.error(error_exception)
+                                logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
+                        # Get callsign based on DMR ID
+                        # End APRS-IS upload
+                    # Assume this is an SMS message
+                    elif '$GPRMC' not in final_packet or '$GNRMC' not in final_packet:
+                            logger.info('\nSMS detected. Attempting to parse.')
+                            #logger.info(final_packet)
+    ##                        logger.info('Attempting to find command...')
+    ##                                sms = codecs.decode(bytes.fromhex(''.join(sms_hex[:-8].split('00'))), 'utf-8', 'ignore')
+                            sms = codecs.decode(bytes.fromhex(''.join(sms_hex_string[:-8].split('00'))), 'utf-8', 'ignore')
+                            msg_found = re.sub('.*\n', '', sms)
+                            logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(msg_found) + '\n')
+                            
     ##                        if int_id(_dst_id) == data_id:
                             if int_id(_dst_id) in data_id:
-
-                                aprs_send(aprs_loc_packet)
-                                dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, str(loc.lat[0:7]) + str(loc.lat_dir), str(loc.lon[0:8]) + str(loc.lon_dir), time(), comment, int_id(_rf_src))
-                        except Exception as error_exception:
-                            logger.info('Failed to parse packet. Packet may be deformed. Not uploaded.')
-                            logger.info(error_exception)
-                            logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
-                    # Get callsign based on DMR ID
-                    # End APRS-IS upload
-                # Assume this is an SMS message
-                elif '$GPRMC' not in final_packet or '$GNRMC' not in final_packet:
-                        logger.info('\nSMS detected. Attempting to parse.')
-                        #logger.info(final_packet)
-                        logger.info(sms_hex)
-##                                logger.info(type(sms_hex))
-##                        logger.info('Attempting to find command...')
-##                                sms = codecs.decode(bytes.fromhex(''.join(sms_hex[:-8].split('00'))), 'utf-8', 'ignore')
-                        sms = codecs.decode(bytes.fromhex(''.join(sms_hex_string[:-8].split('00'))), 'utf-8', 'ignore')
-                        msg_found = re.sub('.*\n', '', sms)
-                        logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(msg_found) + '\n')
-                        
-##                        if int_id(_dst_id) == data_id:
-                        if int_id(_dst_id) in data_id:
-                            process_sms(_rf_src, msg_found, _call_type, UNIT_MAP[_rf_src][0])
-##                        if int_id(_dst_id) != data_id:
-                        if int_id(_dst_id) not in data_id:
-
-                            dashboard_sms_write(str(get_alias(int_id(_rf_src), subscriber_ids)), str(get_alias(int_id(_dst_id), subscriber_ids)), int_id(_dst_id), int_id(_rf_src), msg_found, time(), UNIT_MAP[_rf_src][0])
-                        #packet_assembly = ''
-                        pass
+                                process_sms(_rf_src, msg_found, _call_type, UNIT_MAP[_rf_src][0])
+    ##                        if int_id(_dst_id) != data_id:
+                            if int_id(_dst_id) not in data_id:
+                                dashboard_sms_write(str(get_alias(int_id(_rf_src), subscriber_ids)), str(get_alias(int_id(_dst_id), subscriber_ids)), int_id(_dst_id), int_id(_rf_src), msg_found, time(), UNIT_MAP[_rf_src][0])
+                            #packet_assembly = ''
+                            pass
                         #logger.info(bitarray(re.sub("\)|\(|bitarray|'", '', str(bptc_decode(_data)).tobytes().decode('utf-8', 'ignore'))))
                     #logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(sms) + '\n')
                 # Reset the packet assembly to prevent old data from returning.
@@ -1449,6 +1475,8 @@ def svrd_send_all(_svrd_data):
         if CONFIG['SYSTEMS'][system]['ENABLED']:
                 if CONFIG['SYSTEMS'][system]['MODE'] == 'OPENBRIDGE':
                     if CONFIG['SYSTEMS'][system]['ENCRYPTION_KEY'] != b'':
+                        if b'UNIT' in _svrd_data:
+                            logger.debug('Broadcasting gateway ID - SVRD ' + str(int_id(_svrd_data[4:])))
                         systems[system].send_system(_svrd_packet + _svrd_data)
 def ten_loop_func():
     logger.info('10 minute loop')
@@ -1456,21 +1484,18 @@ def ten_loop_func():
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         with open(user_settings_file, 'w') as f:
                 f.write(str(download_aprs_settings(CONFIG)))
+        logger.info('Downloading and writing APRS settings file.')
 
-##    for unit in UNIT_MAP:
     for my_id in data_id:
         svrd_send_all(b'UNIT' + bytes_4(my_id))
-        print('SVRD ' + str(my_id))
-##        # Download burn list
-##    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED']:
-##        with open(CONFIG['WEB_SERVICE']['BURN_FILE'], 'w') as f:
-##            f.write(str(download_burnlist(CONFIG)))
-                
+        
+                       
     
 def rule_timer_loop():
     global UNIT_MAP
     logger.debug('(ROUTER) routerHBP Rule timer loop started')
     _now = time()
+    # Keep UNIT locations for 24 hours
     _then = _now - (3600 *24)
     remove_list = []
     for unit in UNIT_MAP:
@@ -1485,14 +1510,14 @@ def rule_timer_loop():
         ping(CONFIG)
         send_unit_table(CONFIG, UNIT_MAP)
         send_que = send_sms_que_req(CONFIG)
-        print(UNIT_MAP)
+        logger.debug(UNIT_MAP)
         try:
             for i in send_que:
                 try:
                     send_sms(False, i['rcv_id'], 9, 9, 'unit',  i['msg'])
                 except Exception as e:
-                    logger.info('Error sending SMS in que to ' + str(i['rcv_id']) + ' - ' + i['msg'])
-                    logger.info(e)
+                    logger.error('Error sending SMS in que to ' + str(i['rcv_id']) + ' - ' + i['msg'])
+                    logger.error(e)
         except Exception as e:
             logger.error('Send que error')
             logger.error(e)
@@ -1506,7 +1531,6 @@ class OBP(OPENBRIDGE):
 
 
     def dmrd_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data):
-        print(_frame_type)
 ##        UNIT_MAP[_rf_src] = (self._system, time())
         UNIT_MAP[_rf_src] = (_seq, time())
         if _rf_src not in PACKET_MATCH:
@@ -1514,62 +1538,60 @@ class OBP(OPENBRIDGE):
 
         # Check to see if we have already received this packet
         elif _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
-            print('matched, dropping')
+            logger.debug('Packet matched, dropping: OBP')
             pass
-            print(PACKET_MATCH)
         else:
             PACKET_MATCH[_rf_src] = [_seq, time()]
-            print('OBP RCVD')
+            logger.debug('OBP RCVD')
             if _dtype_vseq in [3,6,7] and _call_type == 'unit' or _call_type == 'group' and _dtype_vseq == 6 or _call_type == 'vcsbk':
                 data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
             else:
                 pass       
 
     def svrd_received(self, _mode, _data):
-        print('SVRD RCV')
+        logger.debug('SVRD RCV')
         if _mode == b'UNIT':
-            UNIT_MAP[_data] = (self._system, time())
-            print(UNIT_MAP)
-        if _mode == b'DATA' or _mode == b'MDAT':
-##            print(ahex(_data))
-        # DMR Data packet, sent via SVRD
-            _peer_id = _data[11:15]
-            _seq = _data[4]
-            _rf_src = _data[5:8]
-            _dst_id = _data[8:11]
-            _bits = _data[15]
-            _slot = 2 if (_bits & 0x80) else 1
-            #_call_type = 'unit' if (_bits & 0x40) else 'group'
-            if _bits & 0x40:
-                _call_type = 'unit'
-            elif (_bits & 0x23) == 0x23:
-                _call_type = 'vcsbk'
-            else:
-                _call_type = 'group'
-            _frame_type = (_bits & 0x30) >> 4
-            _dtype_vseq = (_bits & 0xF) # data, 1=voice header, 2=voice terminator; voice, 0=burst A ... 5=burst F
-            _stream_id = _data[16:20]
-
-##            print(int_id(_peer_id))
-##            print(int_id(_rf_src))
-##            print(int_id(_dst_id))
-##            print((_dtype_vseq))
-##            print(ahex(bptc_decode(_data)))
-                       
-            if _mode == b'MDAT' or _mode == b'DATA':
-                print('MDAT')
-                if _rf_src not in PACKET_MATCH:
-                    PACKET_MATCH[_rf_src] = [_seq, time()]
-                if _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
-                    print('matched, dropping')
-                    pass
-
-                else:
-                    print('no match')
-                    if _mode == b'MDAT':
-                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, True)
-                    if _mode == b'DATA':
-                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
+            UNIT_MAP[_data] = (self._system, time())           
+##        if _mode == b'DATA' or _mode == b'MDAT':
+####            print(ahex(_data))
+##        # DMR Data packet, sent via SVRD
+##            _peer_id = _data[11:15]
+##            _seq = _data[4]
+##            _rf_src = _data[5:8]
+##            _dst_id = _data[8:11]
+##            _bits = _data[15]
+##            _slot = 2 if (_bits & 0x80) else 1
+##            #_call_type = 'unit' if (_bits & 0x40) else 'group'
+##            if _bits & 0x40:
+##                _call_type = 'unit'
+##            elif (_bits & 0x23) == 0x23:
+##                _call_type = 'vcsbk'
+##            else:
+##                _call_type = 'group'
+##            _frame_type = (_bits & 0x30) >> 4
+##            _dtype_vseq = (_bits & 0xF) # data, 1=voice header, 2=voice terminator; voice, 0=burst A ... 5=burst F
+##            _stream_id = _data[16:20]
+##
+####            print(int_id(_peer_id))
+####            print(int_id(_rf_src))
+####            print(int_id(_dst_id))
+####            print((_dtype_vseq))
+####            print(ahex(bptc_decode(_data)))
+##                       
+##            if _mode == b'MDAT' or _mode == b'DATA':
+##                print('MDAT')
+##                if _rf_src not in PACKET_MATCH:
+##                    PACKET_MATCH[_rf_src] = [_seq, time()]
+##                if _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
+##                    print('matched, dropping')
+##                    pass
+##
+##                else:
+##                    print('no match')
+##                    if _mode == b'MDAT':
+##                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, True)
+##                    if _mode == b'DATA':
+##                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
 
 
 
@@ -1580,13 +1602,12 @@ class HBP(HBSYSTEM):
 
     def dmrd_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data):
         UNIT_MAP[_rf_src] = (self._system, time())
-##        print(ahex(_data))
-        print('MMDVM RCVD')
+##        logger.debug(ahex(_data))
+        logger.debug('MMDVM RCVD')
         if _rf_src not in PACKET_MATCH:
             PACKET_MATCH[_rf_src] = [_data, time()]
         elif _data == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
-            print('matched, dropping')
-            print(PACKET_MATCH)
+            logger.debug('Packet matched, dropping: MMDVM')
             pass
         else:
             PACKET_MATCH[_rf_src] = [_data, time()]
@@ -1715,7 +1736,7 @@ if __name__ == '__main__':
 
     # Initialize the rule timer -- this if for user activated stuff
     rule_timer_task = task.LoopingCall(rule_timer_loop)
-    rule_timer = rule_timer_task.start(10)
+    rule_timer = rule_timer_task.start(30)
     rule_timer.addErrback(loopingErrHandle)
 
     # Used for misc timing events
