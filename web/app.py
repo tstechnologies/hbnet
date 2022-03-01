@@ -7073,8 +7073,11 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 ##        try:
         for i in table_dict.items():
             try:
-                usr_nm = User.query.filter(User.dmr_ids.ilike('%' + str(int_id(i[0])) + '%')).first()
-                usr_lnk = '''<a href="/edit_user?callsign=''' + str(usr_nm.username) + '''"><button type="button" class="btn btn-success">''' + str(usr_nm.username) + '''</button></a>'''
+                if len(str(int_id(i[0]))) > 6:
+                    usr_nm = User.query.filter(User.dmr_ids.ilike('%' + str(int_id(i[0])) + '%')).first()
+                    usr_lnk = '''<a href="/edit_user?callsign=''' + str(usr_nm.username) + '''"><button type="button" class="btn btn-success">''' + str(usr_nm.username) + '''</button></a>'''
+                else:
+                    usr_nm = ''
             except:
                 usr_lnk = ''
             content = content + '''
