@@ -7203,10 +7203,17 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                     print(u_role.role_id)
                     if u_role.role_id == 1 or allow_user_sms == True:
                         #    def sms_que_add(_snd_call, _rcv_call, _snd_id, _rcv_id, _msg_type, _call_type, _server, _system_name, _msg):
-                        sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'unit', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
-                        msg = jsonify(status='Sucess',
-                        reason='Added SMS to que')
-                        response = make_response(msg, 200)
+                        if api_data['type'] == 'group':
+                            sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'group', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
+                            msg = jsonify(status='Sucess',
+                            reason='Added Group SMS to que')
+                            response = make_response(msg, 200)
+
+                        else:
+                            sms_que_add(user, '', 0, api_data['dmr_id'], 'motorola', 'unit', api_data['gateway'], '', 'From: ' + user + '. ' + api_data['sms'])
+                            msg = jsonify(status='Sucess',
+                            reason='Added UNIT SMS to que')
+                            response = make_response(msg, 200)
                     else:
                         msg = jsonify(status='SMS disabled',
                         reason='SMS via API disabled. Contact administrator.')
