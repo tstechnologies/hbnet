@@ -1411,9 +1411,11 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
         if _dtype_vseq == 6 or _dtype_vseq == 'group':
             global btf, hdr_start
             # Header is a "Defined Short Data", used by Hytera I suspect
-            if ahex(bptc_decode(_data)[:-88]) == b'0d':
+            if ahex(bptc_decode(_data)[4:-88]) == b'd0':
                 logger.debug('Defined Short Data header detected.')
-                btf = (ba2num(bptc_decode(_data)[12:-80]))
+                # Construct blocks to follow
+                btf = (ba2num(bptc_decode(_data)[2:-92] + bptc_decode(_data)[12:-80]))
+                hdr_type = 'dsd'
             # Everyone else
             else:
                 logger.debug('Unconfirmed Data header detected.')
@@ -1422,6 +1424,7 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                 logger.debug(ahex(bptc_decode(_data)))
                 logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
                 btf = ba2num(bptc_decode(_data)[65:72])
+                hdr_type = ''
             # Try resetting packet_assembly
             packet_assembly = ''
         # Data blocks at 1/2 rate, see https://github.com/g4klx/MMDVM/blob/master/DMRDefines.h for data types. _dtype_seq defined here also
@@ -1445,6 +1448,10 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                 final_packet = str(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly)).tobytes().decode('utf-8', 'ignore'))
                 sms_hex = str(ba2hx(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly))))
                 sms_hex_string = re.sub("b'|'", '', str(sms_hex))
+                if hdr_type == 'dsd':
+                    logger.debug('Trimmed for Defined Short Data')
+                    print(hdr_type)
+                    sms_hex_string = sms_hex_string[2:]
                 # Filter out ARS
                 # Look for port 4005 twice, and 'hello' - 000cf0, and UDP header in first 16 characters
 ##                if sms_hex_string[40:48] == '0fa50fa5':
