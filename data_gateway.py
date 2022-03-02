@@ -1410,11 +1410,18 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
         global packet_assembly, btf
         if _dtype_vseq == 6 or _dtype_vseq == 'group':
             global btf, hdr_start
-            hdr_start = str(header_ID(_data))
-            logger.info('Header from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)))
-            logger.debug(ahex(bptc_decode(_data)))
-            logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
-            btf = ba2num(bptc_decode(_data)[65:72])
+            # Header is a "Defined Short Data", used by Hytera I suspect
+            if ahex(bptc_decode(_data)[:-88]) == b'0d':
+                logger.debug('Defined Short Data header detected.')
+                btf = (ba2num(bptc_decode(_data)[12:-80]))
+            # Everyone else
+            else:
+                logger.debug('Unconfirmed Data header detected.')
+                hdr_start = str(header_ID(_data))
+                logger.info('Header from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)))
+                logger.debug(ahex(bptc_decode(_data)))
+                logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
+                btf = ba2num(bptc_decode(_data)[65:72])
             # Try resetting packet_assembly
             packet_assembly = ''
         # Data blocks at 1/2 rate, see https://github.com/g4klx/MMDVM/blob/master/DMRDefines.h for data types. _dtype_seq defined here also
