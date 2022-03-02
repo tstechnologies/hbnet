@@ -98,6 +98,9 @@ import traceback
 
 from socket import gethostbyname
 
+from data_gateway_local_commands import LOCAL_COMMANDS
+import subprocess
+
 
 #################################
 
@@ -794,15 +797,15 @@ def process_sms(_rf_src, sms, call_type, system_name):
                     logger.error('User APRS messaging disabled.')
 ##            if call_type == 'vcsbk':
 ##                send_sms(False, 9, 9, 9, 'group',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
-
-##    try:
-##        if sms in cmd_list:
-##            logger.info('Executing command/script.')
-##            os.popen(cmd_list[sms]).read()
-##            packet_assembly = ''
-##    except Exception as error_exception:
-##        logger.info('Exception. Command possibly not in list, or other error.')
-##        logger.info(error_exception)
+    elif '%' in parse_sms[0]:
+        try:
+##            if parse_sms[0][1:] in LOCAL_COMMANDS:
+        
+            logger.info('Executing command/script.')
+            subprocess.Popen(LOCAL_COMMANDS[parse_sms[0][1:]], shell=False)
+        except Exception as error_exception:
+            logger.info('Exception. Command possibly not in list, or other error.')
+            logger.info(error_exception)
 ##        logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
 ##        packet_assembly = ''
     else:
