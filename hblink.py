@@ -325,7 +325,7 @@ class HBSYSTEM(DatagramProtocol):
         try:
             req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
             resp = json.loads(req.text)
-            print(resp)
+            logger.debug(resp)
             return resp
         except requests.ConnectionError:
             return {'allow':True}
@@ -369,11 +369,9 @@ class HBSYSTEM(DatagramProtocol):
         'software': re.sub("b'|'|\s\s+", '', str(soft))
         }
         json_object = json.dumps(peer_loc_conf, indent = 4)
-        print()
-        print()
-        print(json_object)
-        print()
-        print()
+
+        logger.debug(json_object)
+
         try:
             req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
         #    resp = json.loads(req.text)
@@ -625,13 +623,12 @@ class HBSYSTEM(DatagramProtocol):
                     else:
                         user_auth = False
                 elif self._config['USE_USER_MAN'] == False:
-                    print('False')
+                    logger.debug('False, not using user manager')
                     b_acl = self._config['REG_ACL']
                     if self._CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
                         # If UMS is False, and Rmote Confir True
                         if acl_check(_peer_id, self._CONFIG['GLOBAL']['REG_ACL']) and acl_check(_peer_id, self._config['REG_ACL']):
                             user_auth = True
-                            print(self._CONFIG['GLOBAL']['REG_ACL'])
                         else:
                             user_auth = False
                     #If UMS and Remot Config False        

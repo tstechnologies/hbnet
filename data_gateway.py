@@ -991,9 +991,9 @@ def create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string):
             mmdvm_send_seq.append(the_mmdvm_pkt)
             cap_in = cap_in + 1
             
-    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:  
-        with open('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + str(random.randint(1000, 9999)) + '.mmdvm_seq', "w") as packet_write_file:
-            packet_write_file.write(str(mmdvm_send_seq))
+##    if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:  
+##        with open('/tmp/.hblink_data_que_' + str(CONFIG['DATA_CONFIG']['APRS_LOGIN_CALL']).upper() + '/' + str(random.randint(1000, 9999)) + '.mmdvm_seq', "w") as packet_write_file:
+##            packet_write_file.write(str(mmdvm_send_seq))
             
     return mmdvm_send_seq
 ##    return the_mmdvm_pkt
@@ -1539,8 +1539,8 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                                 float(loc.lon)
         ##                        if int_id(_dst_id) == data_id:
                                 if int_id(_dst_id) in data_id:
-                                    aprs_send(aprs_loc_packet)
                                     dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, str(loc.lat[0:7]) + str(loc.lat_dir), str(loc.lon[0:8]) + str(loc.lon_dir), time(), comment, int_id(_rf_src))
+                                    aprs_send(aprs_loc_packet)
                             except Exception as error_exception:
                                 logger.error('Failed to parse packet. Packet may be deformed. Not uploaded.')
                                 logger.error(error_exception)
@@ -1665,46 +1665,46 @@ class OBP(OPENBRIDGE):
         logger.debug('SVRD RCV')
         if _mode == b'UNIT':
             UNIT_MAP[_data] = (self._system, time())           
-##        if _mode == b'DATA' or _mode == b'MDAT':
-####            print(ahex(_data))
-##        # DMR Data packet, sent via SVRD
-##            _peer_id = _data[11:15]
-##            _seq = _data[4]
-##            _rf_src = _data[5:8]
-##            _dst_id = _data[8:11]
-##            _bits = _data[15]
-##            _slot = 2 if (_bits & 0x80) else 1
-##            #_call_type = 'unit' if (_bits & 0x40) else 'group'
-##            if _bits & 0x40:
-##                _call_type = 'unit'
-##            elif (_bits & 0x23) == 0x23:
-##                _call_type = 'vcsbk'
-##            else:
-##                _call_type = 'group'
-##            _frame_type = (_bits & 0x30) >> 4
-##            _dtype_vseq = (_bits & 0xF) # data, 1=voice header, 2=voice terminator; voice, 0=burst A ... 5=burst F
-##            _stream_id = _data[16:20]
-##
-####            print(int_id(_peer_id))
-####            print(int_id(_rf_src))
-####            print(int_id(_dst_id))
-####            print((_dtype_vseq))
-####            print(ahex(bptc_decode(_data)))
-##                       
-##            if _mode == b'MDAT' or _mode == b'DATA':
-##                print('MDAT')
-##                if _rf_src not in PACKET_MATCH:
-##                    PACKET_MATCH[_rf_src] = [_seq, time()]
-##                if _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
-##                    print('matched, dropping')
-##                    pass
-##
-##                else:
-##                    print('no match')
-##                    if _mode == b'MDAT':
-##                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, True)
-##                    if _mode == b'DATA':
-##                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
+        if _mode == b'DATA' or _mode == b'MDAT':
+##            print(ahex(_data))
+        # DMR Data packet, sent via SVRD
+            _peer_id = _data[11:15]
+            _seq = _data[4]
+            _rf_src = _data[5:8]
+            _dst_id = _data[8:11]
+            _bits = _data[15]
+            _slot = 2 if (_bits & 0x80) else 1
+            #_call_type = 'unit' if (_bits & 0x40) else 'group'
+            if _bits & 0x40:
+                _call_type = 'unit'
+            elif (_bits & 0x23) == 0x23:
+                _call_type = 'vcsbk'
+            else:
+                _call_type = 'group'
+            _frame_type = (_bits & 0x30) >> 4
+            _dtype_vseq = (_bits & 0xF) # data, 1=voice header, 2=voice terminator; voice, 0=burst A ... 5=burst F
+            _stream_id = _data[16:20]
+
+##            print(int_id(_peer_id))
+##            print(int_id(_rf_src))
+##            print(int_id(_dst_id))
+##            print((_dtype_vseq))
+##            print(ahex(bptc_decode(_data)))
+                       
+            if _mode == b'MDAT' or _mode == b'DATA':
+                print('MDAT')
+                if _rf_src not in PACKET_MATCH:
+                    PACKET_MATCH[_rf_src] = [_seq, time()]
+                if _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
+                    print('matched, dropping')
+                    pass
+
+                else:
+                    print('no match')
+                    if _mode == b'MDAT':
+                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, True)
+                    if _mode == b'DATA':
+                        data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
 
 
 
@@ -1791,7 +1791,6 @@ if __name__ == '__main__':
 ####    use_api = CONFIG['DATA_CONFIG']['USE_API']
 
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
-####        if 'DUAL_DASH' in CONFIG['WEB_SERVICE']['']
         pass
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == False:
         # Check if user_settings (for APRS settings of users) exists. Creat it if not.
@@ -1858,7 +1857,7 @@ if __name__ == '__main__':
     ten_loop.addErrback(loopingErrHandle)
 
     if 'N0CALL' in aprs_callsign:
-        logger.info('APRS callsighn set to N0CALL, packet not sent.')
+        logger.info('APRS callsign set to N0CALL, packet not sent.')
         pass
     else:
         aprs_thread = threading.Thread(target=aprs_rx, args=(aprs_callsign, aprs_passcode, aprs_server, aprs_port, aprs_filter, user_ssid,))

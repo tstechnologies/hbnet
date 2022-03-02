@@ -7007,7 +7007,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 '''
             b_list = b_list + '''</tbody></table>
 <h3 style="text-align: center;">View/Edit Rules (Bridges)</h3>
-/
+
 '''
             r_list = ''
             for i in s:

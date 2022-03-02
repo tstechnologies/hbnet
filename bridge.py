@@ -89,30 +89,30 @@ __email__      = 'kf7eel@qsl.net'
 
 ##import os, ast
 
-# Function to download rules
-def update_tg(CONFIG, mode, dmr_id, data):
-    user_man_url = CONFIG['WEB_SERVICE']['URL']
-    shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
-    update_srv = {
-    'update_tg':CONFIG['WEB_SERVICE']['THIS_SERVER_NAME'],
-    'secret':shared_secret,
-    'dmr_id': dmr_id,
-##    'ts1': data['ts1'],
-##    'ts2': data['ts2'],
-    'mode': mode,
-    'data': data
-    }
-##    print(rules_check)
-    json_object = json.dumps(update_srv, indent = 4)
-    
-    try:
-        req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
-##        resp = json.loads(req.text)
-##        print(resp)
-##        return resp['rules']
-    except requests.ConnectionError:
-        logger.error('Config server unreachable, defaulting to local config')
-##        return config.build_config(cli_file)
+### Function to download rules
+##def update_tg(CONFIG, mode, dmr_id, data):
+##    user_man_url = CONFIG['WEB_SERVICE']['URL']
+##    shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
+##    update_srv = {
+##    'update_tg':CONFIG['WEB_SERVICE']['THIS_SERVER_NAME'],
+##    'secret':shared_secret,
+##    'dmr_id': dmr_id,
+####    'ts1': data['ts1'],
+####    'ts2': data['ts2'],
+##    'mode': mode,
+##    'data': data
+##    }
+####    print(rules_check)
+##    json_object = json.dumps(update_srv, indent = 4)
+##    
+##    try:
+##        req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+####        resp = json.loads(req.text)
+####        print(resp)
+####        return resp['rules']
+##    except requests.ConnectionError:
+##        logger.error('Config server unreachable, defaulting to local config')
+####        return config.build_config(cli_file)
 
 
 def send_unit_table(CONFIG, _data):
@@ -377,7 +377,7 @@ def hotspot_proxy(listen_port, port_start, port_stop):
     reactor.listenUDP(ListenPort,Proxy(Master,ListenPort,CONNTRACK,BlackList,Timeout,Debug,ClientInfo,DestportStart,DestPortEnd),interface=ListenIP)
 
     def loopingErrHandle(failure):
-        print('(GLOBAL) STOPPING REACTOR TO AVOID MEMORY LEAK: Unhandled error innowtimed loop.\n {}'.format(failure))
+        logger.info('(GLOBAL) STOPPING REACTOR TO AVOID MEMORY LEAK: Unhandled error innowtimed loop.\n {}'.format(failure))
         reactor.stop()
         
     def stats():        
@@ -390,7 +390,7 @@ def hotspot_proxy(listen_port, port_start, port_stop):
         totalPorts = DestPortEnd - DestportStart
         freePorts = totalPorts - count
         
-        print("{} ports out of {} in use ({} free)".format(count,totalPorts,freePorts))
+        logger.info("{} ports out of {} in use ({} free)".format(count,totalPorts,freePorts))
 
 
         
@@ -585,7 +585,6 @@ def rule_timer_loop(unit_flood_time):
 
 # run this every 10 seconds to trim orphaned stream ids
 def stream_trimmer_loop():
-    print(UNIT_MAP)
     ping(CONFIG)
     logger.debug('(ROUTER) Trimming inactive stream IDs from system lists')
     _now = time()
@@ -851,8 +850,8 @@ class routerOBP(OPENBRIDGE):
         dmrpkt = _data[20:53]
         _bits = _data[15]
 
-        print('Src: ' + str(int_id(_rf_src)))
-        print('Dst: ' + str(int_id(_dst_id)))
+        logger.debug('Src: ' + str(int_id(_rf_src)))
+        logger.debug('Dst: ' + str(int_id(_dst_id)))
  
         # Make/update this unit in the UNIT_MAP cache
         UNIT_MAP[_rf_src] = (self.name, pkt_time)
