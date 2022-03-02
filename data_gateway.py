@@ -1057,6 +1057,7 @@ def format_sms(msg, to_id, from_id, use_header = True):
     return headers + final
 
 def gen_header(to_id, from_id, call_type):
+    print(call_type)
     if call_type == 1:
         seq_header = '024A' + to_id + from_id + '9550'
     if call_type == 0:
@@ -1092,39 +1093,79 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
         slot = snd_slot
     if csbk == True:
         use_csbk = True
-
-
-  # We know where the user is
-    if bytes.fromhex(to_id) in UNIT_MAP:
-        logger.debug('Found user in UNIT map')
-##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
-        if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                slot = 0
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                logger.info('OBP ' + s + ', BOTH_SLOTS = False. Sending on TS: ' + str(slot + 1))
-                for d in snd_seq_lst:
-                    systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
-                
-        elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-##        else:
-                logger.debug('User in UNIT map, using send function')
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                send_to_user(to_id, snd_seq_lst, slot, call_type)
-  # We don't know where the user is
-    elif bytes.fromhex(to_id) not in UNIT_MAP:
-        logger.debug('User not in UNIT map. Flooding SYSTEMS')
+    if ascii_call_type == 'unit':
+        # We know where the user is
+        if bytes.fromhex(to_id) in UNIT_MAP:
+    ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
+            if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                    slot = 0
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    for d in snd_seq_lst:
+                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                    logger.info('Sending on TS: ' + str(slot))
+            elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    for d in snd_seq_lst:
+                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                    logger.info('Sending on TS: ' + str(slot))
+      # We don't know where the user is
+        elif bytes.fromhex(to_id) not in UNIT_MAP:
+            for s in CONFIG['SYSTEMS']:
+                if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                    slot = 0
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    for d in snd_seq_lst:
+                        systems[s].send_system(d)
+                    logger.info('User not in map. Sending on TS: ' + str(slot))
+                elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    for d in snd_seq_lst:
+                        systems[s].send_system(d)
+                    logger.info('User not in map. Sending on TS: ' + str(slot))
+    if ascii_call_type == 'group':
+        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, create_crc16(gen_header(to_id, from_id, 0)) + create_crc32(format_sms(str(msg), to_id, from_id)))
         for s in CONFIG['SYSTEMS']:
-            if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                slot = 0
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                logger.debug('OBP ' + s + ', BOTH_SLOTS = False. Sending on TS: ' + str(slot + 1))
-                for d in snd_seq_lst:
-                    systems[s].send_system(d)
-            elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-##            else:
-                snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
-                send_to_user(to_id, snd_seq_lst, slot, call_type)
-                logger.debug('Using send function.')
+            for d in snd_seq_lst:
+                systems[s].send_system(d)
+
+
+##    if ascii_call_type == 'unit':
+##      # We know where the user is
+##        if bytes.fromhex(to_id) in UNIT_MAP:
+##            logger.debug('UNIT call. Found user in UNIT map')
+##    ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
+##            if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+##                    slot = 0
+##                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##                    logger.info('OBP ' + s + ', BOTH_SLOTS = False. Sending on TS: ' + str(slot + 1))
+##                    for d in snd_seq_lst:
+##                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+##                    
+##            elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+##    ##        else:
+##                    logger.debug('User in UNIT map, using send function')
+##                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##                    send_to_user(to_id, snd_seq_lst, slot, call_type)
+##      # We don't know where the user is
+##        elif bytes.fromhex(to_id) not in UNIT_MAP:
+##            logger.debug('User not in UNIT map. Flooding SYSTEMS')
+##            for s in CONFIG['SYSTEMS']:
+##                if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+##                    slot = 0
+##                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##                    logger.debug('OBP ' + s + ', BOTH_SLOTS = False. Sending on TS: ' + str(slot + 1))
+##                    for d in snd_seq_lst:
+##                        systems[s].send_system(d)
+##                elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+##    ##            else:
+##                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##                    send_to_user(to_id, snd_seq_lst, slot, call_type)
+##                    logger.debug('Using send function.')
+##            
+##    if ascii_call_type == 'group':
+##        logger.debug('Sending group call')
+##        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+##        send_to_user(to_id, snd_seq_lst, slot, ascii_call_type)
 
 
 ##    if bytes.fromhex(to_id) in UNIT_MAP:
@@ -1171,12 +1212,13 @@ def send_to_user(to_id, seq_lst, slot, call_type = 'unit'):
                     logger.debug('User not in UNIT map. Sending to all SYSTEMS.')
                     
     elif call_type == 'group':
+        logger.debug('Group data')
         for s in CONFIG['SYSTEMS']:
                 if CONFIG['SYSTEMS'][s]['ENABLED'] == True:
                     for d in seq_lst:
                         systems[s].send_system(d)
-                    logger.debug('Group data, sending to all systems.')
-##
+        logger.debug('Group data, sending to all systems.')
+
 
 def aprs_process(packet):
 ##    logger.debug(aprslib.parse(packet))
@@ -1571,7 +1613,7 @@ def rule_timer_loop():
         try:
             for i in send_que:
                 try:
-                    send_sms(False, i['rcv_id'], 9, 9, 'unit',  i['msg'])
+                    send_sms(False, i['rcv_id'], 9, 9, i['call_type'],  i['msg'])
                 except Exception as e:
                     logger.error('Error sending SMS in que to ' + str(i['rcv_id']) + ' - ' + i['msg'])
                     logger.error(e)
@@ -1669,7 +1711,7 @@ class HBP(HBSYSTEM):
         else:
             PACKET_MATCH[_rf_src] = [_data, time()]
 ##        try:
-        if _dtype_vseq in [3,6,7] and _call_type == 'unit' or _call_type == 'group' and _dytpe_vseq == 6 or _call_type == 'vcsbk':
+        if _dtype_vseq in [3,6,7] and _call_type == 'unit' or _call_type == 'group' and _dtype_vseq == 6 or _call_type == 'vcsbk':
             data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data)
         else:
             pass
