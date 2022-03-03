@@ -58,6 +58,8 @@ __license__    = 'GNU GPLv3'
 __maintainer__ = 'Eric Craw, kf7eel@qsl.net'
 __email__      = 'kf7eel@qsl.net'
 
+BRIDGES = {}
+
 def build_unit(CONFIG):
     UNIT = []
     for i in CONFIG['SYSTEMS'].items():
@@ -73,7 +75,7 @@ def data_que_send():
     try:
         #logger.info(UNIT_MAP)
         for packet_file in os.listdir('/tmp/.hblink_data_que_ipsc/'):
-            logger.info('Sending SMS')
+            logger.info('Sending data...')
             data_file = ast.literal_eval(os.popen('cat /tmp/.hblink_data_que_ipsc/' + str(packet_file)).read())
 
             for i in data_file:
