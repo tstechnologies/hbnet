@@ -11,4 +11,5 @@ libscrc
 resettabletimer
 cryptography
 setproctitle
+scapy
 

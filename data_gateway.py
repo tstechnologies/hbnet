@@ -101,6 +101,12 @@ from socket import gethostbyname
 from data_gateway_local_commands import LOCAL_COMMANDS
 import subprocess
 
+###################### testing #################3
+from scapy.all import IP, UDP, raw
+import ipaddress
+
+
+#################################
 
 #################################
 
@@ -614,23 +620,23 @@ def user_setting_write(dmr_id, setting, value, call_type):
                 if setting.upper() == 'APRS ON':
                     user_dict[dmr_id][5] = {'APRS': True}
                     if call_type == 'unit':
-                        send_sms(False, dmr_id, 9, 9, 'unit', 'APRS MSG TX/RX Enabled')
+                        send_sms(False, dmr_id, data_id[0], data_id[0], 'unit', 'APRS MSG TX/RX Enabled')
                     if call_type == 'vcsbk':
-                        send_sms(False, 9, 9, 9, 'group', 'APRS MSG TX/RX Enabled')
+                        send_sms(False, data_id[0], data_id[0], data_id[0], 'group', 'APRS MSG TX/RX Enabled')
                 if setting.upper() == 'APRS OFF':
                     user_dict[dmr_id][5] = {'APRS': False}
                     if call_type == 'unit':
-                        send_sms(False, dmr_id, 9, 9, 'unit', 'APRS MSG TX/RX Disabled')
+                        send_sms(False, dmr_id, data_id[0], data_id[0], 'unit', 'APRS MSG TX/RX Disabled')
                     if call_type == 'vcsbk':
-                        send_sms(False, 9, 9, 9, 'group', 'APRS MSG TX/RX Disabled')
+                        send_sms(False, data_id[0], data_id[0], data_id[0], 'group', 'APRS MSG TX/RX Disabled')
                 if setting.upper() == 'PIN':
                     #try:
                         #if user_dict[dmr_id]:
                     user_dict[dmr_id][4]['pin'] = value
                     if call_type == 'unit':
-                        send_sms(False, dmr_id, 9, 9, 'unit',  'You can now use your pin on the dashboard.')
+                        send_sms(False, dmr_id, data_id[0], data_id[0], 'unit',  'You can now use your pin on the dashboard.')
                     if call_type == 'vcsbk':
-                        send_sms(False, 9, 9, 9, 'group',  'You can now use your pin on the dashboard.')
+                        send_sms(False, data_id[0], data_id[0], data_id[0], 'group',  'You can now use your pin on the dashboard.')
                         #if not user_dict[dmr_id]:
                         #    user_dict[dmr_id] = [{'call': str(get_alias((dmr_id), subscriber_ids))}, {'ssid': ''}, {'icon': ''}, {'comment': ''}, {'pin': pin}]
                     #except:
@@ -665,13 +671,13 @@ def process_sms(_rf_src, sms, call_type, system_name):
     elif parse_sms[0] == 'ID':
         logger.info(str(get_alias(int_id(_rf_src), subscriber_ids)) + ' - ' + str(int_id(_rf_src)))
         if call_type == 'unit':
-            send_sms(False, int_id(_rf_src), 9, 9, 'unit', 'Your DMR ID: ' + str(int_id(_rf_src)) + ' - ' + str(get_alias(int_id(_rf_src), subscriber_ids)))
+            send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit', 'Your DMR ID: ' + str(int_id(_rf_src)) + ' - ' + str(get_alias(int_id(_rf_src), subscriber_ids)))
 ##        if call_type == 'vcsbk':
 ##            send_sms(False, 9, 9, 9, 'group', 'Your DMR ID: ' + str(int_id(_rf_src)) + ' - ' + str(get_alias(int_id(_rf_src), subscriber_ids)))
     elif parse_sms[0] == 'TEST':
         logger.info('It works!')
         if call_type == 'unit':
-            send_sms(False, int_id(_rf_src), 9, 9, 'unit',  'It works')
+            send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit',  'It works')
 ##        if call_type == 'vcsbk':
 ##            send_sms(False, 9, 9, 9, 'group',  'It works')
 
@@ -787,13 +793,13 @@ def process_sms(_rf_src, sms, call_type, system_name):
                     logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
             else:
                 if call_type == 'unit':
-                    send_sms(False, int_id(_rf_src), 9, 9, 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
+                    send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
 ##                if call_type == 'vcsbk':
 ##                    send_sms(False, 9, 9, 9, 'group',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
                 
         except Exception as e:
             if call_type == 'unit':
-                    send_sms(False, int_id(_rf_src), 9, 9, 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
+                    send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
                     logger.error('User APRS messaging disabled.')
 ##            if call_type == 'vcsbk':
 ##                send_sms(False, 9, 9, 9, 'group',  'APRS Messaging must be enabled. Send command "@APRS ON" or use dashboard to enable.')
@@ -862,6 +868,46 @@ def create_crc32(fragment_input):
     # Return original data and append CRC32
     logger.debug('CRC32 Output: ' + fragment_input + crc)
     return fragment_input + crc
+
+
+def btf_poc(fragment_input):
+    # Break fragment into 12 octet chunks
+    chunks = []
+    count_index = 0
+    while count_index < len(fragment_input):
+        chunks.append((fragment_input[count_index:count_index + 24]))
+        count_index = count_index + 24
+    # Current blocks
+    blocks = len(chunks)
+    # nearest multiple of 12 - below gives POC
+    pre_poc = int((len(fragment_input)/2) + 4)
+    # Need extra block
+    if blocks * 12 < pre_poc:
+        tot_blocks = (blocks + 1) * 12
+        poc = tot_blocks - pre_poc
+        chunks.append('0' * poc)
+    # Don't need extra block
+    if blocks * 12 > pre_poc:
+        poc = ((blocks * 12)- pre_poc)
+##        chunks.append('0' * poc)
+        chunks[-1] = chunks[-1] + ('0' * poc * 2)
+    # Perfect, POC 0, no extra block
+    if blocks * 12 == pre_poc:
+        poc = 0
+    # Zero out last block
+    chunks[-1] = chunks[-1].ljust(poc * 2, '0')
+    # Get new BTF, make string
+    corrected_frag = ''
+    for i in chunks:
+        corrected_frag = corrected_frag + i
+
+    total_btf = int(len(chunks))
+
+    logger.debug('POC: ' + str(poc))
+    logger.debug('BTF: ' + str(total_btf))
+
+    return total_btf, poc, corrected_frag
+
 
 def create_crc16_csbk(fragment_input):
     crc16_csbk = libscrc.gsm16(bytearray.fromhex(fragment_input))
@@ -998,70 +1044,120 @@ def create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string):
     return mmdvm_send_seq
 ##    return the_mmdvm_pkt
 
-# Built for max length msg, will improve later
-def sms_headers(to_id, from_id):
-##    #ETSI 102 361-2 uncompressed ipv4
-##    # UDP header, src and dest ports are 4007, 0fa7
-##    udp_ports = '0fa70fa7'
-##    # Length, of what?
-##    udp_length = '00da'
-##    # Checksum
-##    udp_checksum = '4b37'
-##
-##    # IPV4
-##    #IPV4 version and header length, always 45
-##    ipv4_v_l = '45'
-##    #Type of service, always 00
-##    ipv4_svc = '00'
-##    #length, always 00ee
-##    ipv4_len = '00ee'
-##    #ID always 000d
-##    ipv4_id = '000d'
-##    #Flags and offset always0
-##    ipv4_flag_off = '0000'
-##    #TTL and Protocol always 4011, no matter what
-##    ipv4_ttl_proto = '4011'
-    #ipv4 = '450000ee000d0000401100000c' + from_id + '0c' + to_id
-##    print(gen_sms_seq())
-    ipv4 = '450000ee00' + gen_sms_seq() + '0000401100000c' + from_id + '0c' + to_id
-    count_index = 0
-    hdr_lst = []
-    while count_index < len(ipv4):
-        hdr_lst.append((ipv4[count_index:count_index + 4]))
-        count_index = count_index + 4
-    sum = 0
-    for i in hdr_lst:
-        sum = sum + int(i, 16)
-    flipped = ''
-    for i in str(bin(sum))[2:]:
-        if i == '1':
-            flipped = flipped + '0'
-        if i == '0':
-            flipped = flipped + '1'
-    ipv4_chk_sum = str(hex(int(flipped, 2)))[2:]
-    # UDP checksum is optional per ETSI, zero for now as Anytone is not affected.
-    header = ipv4[:20] + ipv4_chk_sum + ipv4[24:] + '0fa70fa700da000000d0a00081040d000a'
-    return header
+### Built for max length msg, will improve later
+##def sms_headers(to_id, from_id):
+####    #ETSI 102 361-2 uncompressed ipv4
+####    # UDP header, src and dest ports are 4007, 0fa7
+####    udp_ports = '0fa70fa7'
+####    # Length, of what?
+####    udp_length = '00da'
+####    # Checksum
+####    udp_checksum = '4b37'
+####
+####    # IPV4
+####    #IPV4 version and header length, always 45
+####    ipv4_v_l = '45'
+####    #Type of service, always 00
+####    ipv4_svc = '00'
+####    #length, always 00ee
+####    ipv4_len = '00ee'
+####    #ID always 000d
+####    ipv4_id = '000d'
+####    #Flags and offset always0
+####    ipv4_flag_off = '0000'
+####    #TTL and Protocol always 4011, no matter what
+####    ipv4_ttl_proto = '4011'
+##    #ipv4 = '450000ee000d0000401100000c' + from_id + '0c' + to_id
+####    print(gen_sms_seq())
+##    ipv4 = '450000ee00' + gen_sms_seq() + '0000401100000c' + from_id + '0c' + to_id
+##    count_index = 0
+##    hdr_lst = []
+##    while count_index < len(ipv4):
+##        hdr_lst.append((ipv4[count_index:count_index + 4]))
+##        count_index = count_index + 4
+##    sum = 0
+##    for i in hdr_lst:
+##        sum = sum + int(i, 16)
+##    flipped = ''
+##    for i in str(bin(sum))[2:]:
+##        if i == '1':
+##            flipped = flipped + '0'
+##        if i == '0':
+##            flipped = flipped + '1'
+##    ipv4_chk_sum = str(hex(int(flipped, 2)))[2:]
+##    # UDP checksum is optional per ETSI, zero for now as Anytone is not affected.
+##    header = ipv4[:20] + ipv4_chk_sum + ipv4[24:] + '0fa70fa700da000000d0a00081040d000a'
+##    return header
 
-def format_sms(msg, to_id, from_id, use_header = True):
+##def format_sms(msg, to_id, from_id, use_header = True):
+##    msg_bytes = str.encode(msg)
+##    encoded = "".join([str('00' + x) for x in re.findall('..',bytes.hex(msg_bytes))] )
+##    final = encoded
+##    while len(final) < 400:
+##        final = final + '002e'
+##    final = final + '0000000000000000000000'
+##    if use_header == False:
+##        headers = ''
+##    if use_header == True:
+##        headers = sms_headers(to_id, from_id)
+##    return headers + final
+
+def format_sms(msg, to_id, from_id, call_type, use_header = True):
     msg_bytes = str.encode(msg)
     encoded = "".join([str('00' + x) for x in re.findall('..',bytes.hex(msg_bytes))] )
     final = encoded
-    while len(final) < 400:
-        final = final + '002e'
-    final = final + '0000000000000000000000'
-    if use_header == False:
-        headers = ''
-    if use_header == True:
-        headers = sms_headers(to_id, from_id)
-    return headers + final
 
-def gen_header(to_id, from_id, call_type):
-    print(call_type)
+    call_seq_num = gen_sms_seq()
+
+    # Convert DMR ID to integer, the IP for Scapy
+    # 0c adds 12. to the IP address, refferred as the CAI
+    hex_2_ip_src = str('0c' + from_id)
+    hex_2_ip_dest = str('0c' + to_id)
+    src_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_src, 16)))
+    dst_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_dest, 16)))
+
+ 
+    # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
+    unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
+
+    hdr_seq_num = (ahex(int((int(call_seq_num, 16) + 128)).to_bytes(1, 'big')))
+
+    sms_header = '00' + str(ahex(unk_count))[2:-1] + 'a000' + str(hdr_seq_num)[2:-1] + '040d000a'
+
+   
+##    ip_udp = packet = IP(dst=dst_dmr_id, src=src_dmr_id)/UDP(sport=4007, dport=4007)/(bytes.fromhex('0012A00083040D000A') + msg.encode('utf-16') + bytes.fromhex('0000000000000000000000'))
+
+    ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, id=int(call_seq_num, 16))/UDP(sport=4007, dport=4007)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
+
+    header_bits = btf_poc(str(ahex(raw(ip_udp)))[2:-1])
+
+
+    sms_complete_header = create_crc16(gen_header2(to_id, from_id, call_type, header_bits[1], header_bits[0]))
+    logger.debug(sms_complete_header)
+
+
+    # Return corrected fragment with BTF and generate CRC16 with header
+
+    return header_bits[2], sms_complete_header #str(ahex(raw(ip_udp)))[2:-1]
+
+##def gen_header(to_id, from_id, call_type):
+##    print(call_type)
+##    if call_type == 1:
+##        seq_header = '024A' + to_id + from_id + '9550'
+##    if call_type == 0:
+##        seq_header = '824A' + to_id + from_id + '9550'
+##    return seq_header
+
+def gen_header2(to_id, from_id, call_type, poc, btf):
+    s_poc = hex(poc)[2:]
+
+    seq_header = ''
     if call_type == 1:
-        seq_header = '024A' + to_id + from_id + '9550'
+        seq_header = '024' + s_poc + to_id + from_id + ba2hx(bitarray('1' + str(bin(btf))[2:].zfill(7))) + '50'
     if call_type == 0:
-        seq_header = '824A' + to_id + from_id + '9550'
+        seq_header = '824' + s_poc + to_id + from_id + ba2hx(bitarray('1' + str(bin(btf))[2:].zfill(7))) + '50'
+
+##    print(seq_header)
     return seq_header
 
 def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
@@ -1093,19 +1189,23 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
         slot = snd_slot
     if csbk == True:
         use_csbk = True
+
+    logger.debug('Generated:' + str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
     if ascii_call_type == 'unit':
         # We know where the user is
         if bytes.fromhex(to_id) in UNIT_MAP:
     ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
             if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
                     slot = 0
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
                     for d in snd_seq_lst:
+                        print(ahex(d))
                         systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                     logger.info('Sending on TS: ' + str(slot))
             elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
                     for d in snd_seq_lst:
+                        print(ahex(bptc_decode(d)))
                         systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                     logger.info('Sending on TS: ' + str(slot))
       # We don't know where the user is
@@ -1113,17 +1213,17 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
             for s in CONFIG['SYSTEMS']:
                 if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
                     slot = 0
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
                     for d in snd_seq_lst:
                         systems[s].send_system(d)
                     logger.info('User not in map. Sending on TS: ' + str(slot))
                 elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, create_crc16(gen_header(to_id, from_id, call_type)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(format_sms(str(msg), to_id, from_id, call_type)[0]))
                     for d in snd_seq_lst:
                         systems[s].send_system(d)
                     logger.info('User not in map. Sending on TS: ' + str(slot))
     if ascii_call_type == 'group':
-        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, create_crc16(gen_header(to_id, from_id, 0)) + create_crc32(format_sms(str(msg), to_id, from_id)))
+        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, format_sms(str(msg), to_id, from_id, call_type)[1] + create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0]))
         for s in CONFIG['SYSTEMS']:
             for d in snd_seq_lst:
                 systems[s].send_system(d)
@@ -1242,7 +1342,7 @@ def aprs_process(packet):
                         logger.debug('Received APRS message from ' + aprslib.parse(packet)['from'] + '. Going to ' + i[1][0]['call'])
                         logger.info('Received APRS message to ' + i[1][0]['call'] + ', sending via SMS and writing to inbox.')
                         mailbox_write(re.sub('-.*','', aprslib.parse(packet)['addresse']), aprslib.parse(packet)['from'], time(), 'From APRS-IS: ' + aprslib.parse(packet)['message_text'], aprslib.parse(packet)['from'])
-                        send_sms(False, sms_id, 9, 9, 'unit', str('APRS / ' + str(aprslib.parse(packet)['from']) + ': ' + aprslib.parse(packet)['message_text']))
+                        send_sms(False, sms_id, data_id[0], data_id[0], 'unit', str('APRS / ' + str(aprslib.parse(packet)['from']) + ': ' + aprslib.parse(packet)['message_text']))
                         try:
                             if 'msgNo' in aprslib.parse(packet):
                                 logger.debug('Message has a message number, sending ACK...')
@@ -1425,6 +1525,7 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                 logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
                 btf = ba2num(bptc_decode(_data)[65:72])
                 hdr_type = ''
+                print(ba2num(bptc_decode(_data)[12:16]))
             # Try resetting packet_assembly
             packet_assembly = ''
         # Data blocks at 1/2 rate, see https://github.com/g4klx/MMDVM/blob/master/DMRDefines.h for data types. _dtype_seq defined here also
@@ -1627,7 +1728,7 @@ def rule_timer_loop():
         try:
             for i in send_que:
                 try:
-                    send_sms(False, i['rcv_id'], 9, 9, i['call_type'],  i['msg'])
+                    send_sms(False, i['rcv_id'], data_id[0], data_id[0], i['call_type'],  i['msg'])
                 except Exception as e:
                     logger.error('Error sending SMS in que to ' + str(i['rcv_id']) + ' - ' + i['msg'])
                     logger.error(e)
