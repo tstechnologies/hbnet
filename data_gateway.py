@@ -176,7 +176,7 @@ def mqtt_main(broker_url = 'localhost', broker_port = 1883):
                     send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
             
 
-    mqtt_client = mqtt.Client()
+    mqtt_client = mqtt.Client(client_id = mqtt_shortcut_gen + '-' + str(random.randint(1,99)))
     # Last will and testament
     mqtt_client.will_set("ANNOUNCE", json.dumps({mqtt_shortcut_gen:"LOST_CONNECTION"}), 0, False)
     mqtt_client.on_message = on_message
@@ -203,11 +203,8 @@ def mqtt_send_app(network_shortcut, snd_dmr_id, message):
     logger.info('Sent message to external application via MQTT: ' + network_shortcut)
 
 def mqtt_announce():
-    mqtt_client.publish(topic="ANNOUNCE", payload=json.dumps({'shortcut':mqtt_shortcut_gen, 'type': 'network', 'url':'http://localhost'}, indent = 4), qos=0, retain=False)
-
-    
-
-   
+    mqtt_client.publish(topic="ANNOUNCE", payload=json.dumps({'shortcut':mqtt_shortcut_gen, 'type': 'network', 'url':CONFIG['DATA_CONFIG']['URL'], 'description':CONFIG['DATA_CONFIG']['DESCRIPTION']}, indent = 4), qos=0, retain=False)
+  
 
 def download_aprs_settings(_CONFIG):
     user_man_url = _CONFIG['WEB_SERVICE']['URL']
@@ -385,6 +382,26 @@ def send_unit_table(CONFIG, _data):
     except requests.ConnectionError:
         logger.error('Config server unreachable')
 
+def send_known_services(CONFIG, _data):
+    user_man_url = CONFIG['WEB_SERVICE']['URL']
+    shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
+    sms_data = {
+    'known_services': CONFIG['WEB_SERVICE']['THIS_SERVER_NAME'],
+    'secret':shared_secret,
+    'data': str(_data),
+
+    }
+    json_object = json.dumps(sms_data, indent = 4)
+    
+    try:
+        req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
+        logger.debug('Sent UNIT table')
+##        resp = json.loads(req.text)
+##        print(resp)
+##        return resp['rules']
+    except requests.ConnectionError:
+        logger.error('Config server unreachable')
+
 def send_sms_que_req(CONFIG):
     user_man_url = CONFIG['WEB_SERVICE']['URL']
     shared_secret = str(sha256(CONFIG['WEB_SERVICE']['SHARED_SECRET'].encode()).hexdigest())
@@ -440,6 +457,7 @@ def download_config(CONFIG_FILE, cli_file):
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
         resp = json.loads(req.text)
+        print(resp)
         iterate_config = resp['peers'].copy()
         corrected_config = resp['config'].copy()
         corrected_config['SYSTEMS'] = {}
@@ -542,6 +560,7 @@ def download_config(CONFIG_FILE, cli_file):
                 mqtt_options = i[5:].split(':')
                 for o in mqtt_options:
                     final_options = o.split('=')
+                    
                     print(final_options)
                     if final_options[0] == 'gateway_callsign':
                         mqtt_server = corrected_config['DATA_CONFIG']['GATEWAY_CALLSIGN'] = final_options[1].upper()
@@ -549,6 +568,10 @@ def download_config(CONFIG_FILE, cli_file):
                         mqtt_server = corrected_config['DATA_CONFIG']['MQTT_SERVER'] = final_options[1]
                     if final_options[0] == 'port':
                         mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PORT'] = final_options[1]
+                    if final_options[0] == 'url':
+                        mqtt_port = corrected_config['DATA_CONFIG']['URL'] = final_options[1]
+                    if final_options[0] == 'description':
+                        mqtt_port = corrected_config['DATA_CONFIG']['DESCRIPTION'] = final_options[1]
             if 'DATA_GATEWAY:' in i:
 ##                print(i)
                 gateway_options = i[13:].split(':')
@@ -1018,16 +1041,23 @@ def btf_poc(fragment_input):
 
 
 def create_crc16_csbk(fragment_input):
+##    print(fragment_input)
     crc16_csbk = libscrc.gsm16(bytearray.fromhex(fragment_input))
     return fragment_input + re.sub('x', '0', str(hex(crc16_csbk ^ 0xa5a5))[-4:])
-def csbk_gen(to_id, from_id):
-    csbk_lst = ['BD00801a', 'BD008019', 'BD008018', 'BD008017', 'BD008016']
+def csbk_gen(to_id, from_id, tot_block):
+    csbk_lst = ['BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080']
 
     send_seq_list = ''
+    tot_block = tot_block + 5
     for block in csbk_lst:
-        block = block + to_id + from_id
+        print(str(ahex(tot_block.to_bytes(1, 'big')))[2:-1])
+        block = block + str(ahex(tot_block.to_bytes(1, 'big')))[2:-1] + to_id + from_id#str(ahex(int(tot_block))[2:-1])
         block  = create_crc16_csbk(block)
         send_seq_list = send_seq_list + block
+        tot_block = tot_block - 1
+##        print(block)
+    print(send_seq_list)
+    print('---===---')
     return send_seq_list
 
 def mmdvm_encapsulate(dst_id, src_id, peer_id, _seq, _slot, _call_type, _dtype_vseq, _stream_id, _dmr_data):
@@ -1229,9 +1259,9 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
     unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
 
     hdr_seq_num = (ahex(int((int(call_seq_num, 16) + 128)).to_bytes(1, 'big')))
-    print('-----------')
-    print(int(call_seq_num, 16) + 128)
-    print('-------------')
+##    print('-----------')
+##    print(int(call_seq_num, 16) + 128)
+##    print('-------------')
     sms_header = '00' + str(ahex(unk_count))[2:-1] + 'a000' + str(hdr_seq_num)[2:-1] + '040d000a'
 
    
@@ -1243,8 +1273,13 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
 
 
     sms_complete_header = create_crc16(gen_header2(to_id, from_id, call_type, header_bits[1], header_bits[0]))
+    sms_csbk = (csbk_gen(to_id, from_id, header_bits[0]))
     logger.debug(sms_complete_header)
 
+##    print(type(sms_csbk))
+##    print('---')
+##    print((sms_csbk))# + sms_complete_header))
+##    print('---')
 
     # Return corrected fragment with BTF and generate CRC16 with header
 
@@ -1315,7 +1350,7 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
             elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
                     snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
                     for d in snd_seq_lst:
-                        print(ahex(bptc_decode(d)))
+                        print(ahex((d)))
                         systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                     logger.info('Sending on TS: ' + str(slot))
       # We don't know where the user is
@@ -1717,7 +1752,9 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                         logger.info('Received ARS "hello"')
                         logger.debug('Attempt response')
 
-                        ars_response = (ars_resp('0002BF01', str(ahex(_rf_src))[2:-1], str(ahex(_dst_id))[2:-1], 1))
+##                        ars_response = (ars_resp('0002BF01', str(ahex(_rf_src))[2:-1], str(ahex(_dst_id))[2:-1], 1))
+
+                        ars_response = (ars_resp('0002B700', str(ahex(_rf_src))[2:-1], str(ahex(_dst_id))[2:-1], 1))
 
                         ars_snd = create_sms_seq(int_id(_rf_src), int_id(_dst_id), int_id(_dst_id), _slot, 1, ars_response[1] + ars_response[0])
                         print(ars_snd)
@@ -1876,6 +1913,7 @@ def rule_timer_loop():
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED'] == True:
         ping(CONFIG)
         send_unit_table(CONFIG, UNIT_MAP)
+        send_known_services(CONFIG, mqtt_services)
         send_que = send_sms_que_req(CONFIG)
         logger.debug(UNIT_MAP)
         try:
