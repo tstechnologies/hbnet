@@ -7047,6 +7047,62 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
         return render_template('flask_user_layout.html', markup_content = Markup(content))
 
 
+    @app.route('/external_services')
+    def get_known_services():
+        try:
+            svr = ServerList.query.all()
+            web_output = ''
+            table_entry = ''
+            for i in svr:
+                if 'MQTT' in i.other_options:
+                    print(i.name)
+                    known_services = Misc.query.filter_by(field_1='known_services_' + i.name).first()
+                    services_dict = ast.literal_eval(known_services.field_2)
+                    print(services_dict)
+                    for d in services_dict:
+                        print(d)
+                        if services_dict[d]['type'] == 'network':
+                            table_entry = table_entry + '''
+    <tr>
+    <td><strong>#''' + services_dict[d]['shortcut'] + '''</strong></td>
+    <td>Network</td>
+    <td>''' + services_dict[d]['description'] + '''</td>
+    <td><em><code><a href="http://''' + services_dict[d]['url'] + '''">''' + services_dict[d]['url'] + '''</a></code></em></td>
+    </tr>
+    '''
+                        if services_dict[d]['type'] == 'app':
+                            table_entry = table_entry + '''
+    <tr>
+    <td><strong>!''' + services_dict[d]['shortcut'] + '''</strong></td>
+    <td>Application</td>
+
+    <td>''' + services_dict[d]['description'] + '''</td>
+    <td><em><code><a href="''' + services_dict[d]['url'] + '''">''' + services_dict[d]['url'] + '''</a></code></em></td>
+    </tr>
+    '''
+                    web_output = '''
+    <h4 style="text-align: center;">External Services for: ''' + i.name + '''</h4>
+    <table data-toggle="table" data-pagination="true" data-search="true">
+    <thead>
+    <tr>
+    <th>Shortcut</th>
+    <th>Type</th>
+    <th>Description</th>
+    <th>URL</th>
+    </tr>
+    </thead>
+    <tbody>
+    ''' + table_entry + '''
+    </tbody>
+    </table>
+    <p>&nbsp;</p>
+
+    '''
+        except:
+            web_output = 'Not found or other error'
+                
+        return render_template('generic.html', markup_content = Markup(web_output))
+
     @login_required
     @roles_required('Admin')
     @app.route('/unit/<server>')
@@ -7367,6 +7423,17 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                 except:
                     print('entry error')
                     misc_add('unit_table_' + hblink_req['unit_table'], str(hblink_req['data']), '', '', 0, 0, 0, 0, False, False)
+##                    unit_table_add(hblink_req['data'])
+                response = 'rcvd'
+            elif 'known_services' in hblink_req:
+                print(hblink_req)
+##                    del_unit_table(hblink_req['unit_table'])
+                try:
+                    delete_misc_field_1('known_services_' + hblink_req['known_services'])
+                    misc_add('known_services_' + hblink_req['known_services'], str(hblink_req['data']), '', '', 0, 0, 0, 0, False, False)
+                except:
+                    print('entry error')
+                    misc_add('known_services_' + hblink_req['known_services'], str(hblink_req['data']), '', '', 0, 0, 0, 0, False, False)
 ##                    unit_table_add(hblink_req['data'])
                 response = 'rcvd'
 
