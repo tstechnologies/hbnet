@@ -457,7 +457,6 @@ def download_config(CONFIG_FILE, cli_file):
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
         resp = json.loads(req.text)
-        print(resp)
         iterate_config = resp['peers'].copy()
         corrected_config = resp['config'].copy()
         corrected_config['SYSTEMS'] = {}
@@ -885,18 +884,18 @@ def process_sms(_rf_src, sms, call_type, system_name):
           
     elif '#' == parse_sms[0][0:1]:
 ##        print(mqtt_services.keys())
-        if parse_sms[0][1:] in mqtt_services.keys():
-            mqtt_send_msg(str(parse_sms[0])[1:], parse_sms[1], int_id(_rf_src), ' '.join(parse_sms[2:]))
-        else:
-            # Add error message
-            pass
+##        if parse_sms[0][1:] in mqtt_services.keys():
+        mqtt_send_msg(str(parse_sms[0])[1:], parse_sms[1], int_id(_rf_src), ' '.join(parse_sms[2:]))
+##        else:
+##            # Add error message
+##            pass
     elif '!' == parse_sms[0][0:1]:
 ##        print(mqtt_services.keys())
-        if parse_sms[0][1:] in mqtt_services.keys():
-            mqtt_send_app(str(parse_sms[0])[1:], str(int_id(_rf_src)), ' '.join(parse_sms[1:]))
-        else:
-            # Add error message
-            pass
+##        if parse_sms[0][1:] in mqtt_services.keys():
+        mqtt_send_app(str(parse_sms[0])[1:], str(int_id(_rf_src)), ' '.join(parse_sms[1:]))
+##        else:
+##            # Add error message
+##            pass
         
     elif '@' in parse_sms[0][0:1] and ' ' in sms: #'M-' not in parse_sms[1][0:2] or '@' not in parse_sms[0][1:]:
         #Example SMS text: @ARMDS This is a test.
@@ -1761,7 +1760,9 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
 
                         for i in ars_snd:
                             print(ahex(bptc_decode(i)))
+##                            systems[UNIT_MAP[_rf_src][0]].send_system(i)
                             systems[UNIT_MAP[_rf_src][0]].send_system(i)
+
                             
 
 
@@ -2073,6 +2074,8 @@ if __name__ == '__main__':
     user_ssid = CONFIG['DATA_CONFIG']['USER_APRS_SSID']
     aprs_comment = CONFIG['DATA_CONFIG']['USER_APRS_COMMENT']
     aprs_filter = CONFIG['DATA_CONFIG']['APRS_FILTER']
+
+  
     
 
 ##    # User APRS settings
@@ -2146,10 +2149,12 @@ if __name__ == '__main__':
     rule_timer.addErrback(loopingErrHandle)
 
     # Experimental MQTT for external applications, etc.
-    print(CONFIG['DATA_CONFIG']['MQTT_SERVER'])
-    mqtt_thread = threading.Thread(target=mqtt_main, args=(CONFIG['DATA_CONFIG']['MQTT_SERVER'],int(CONFIG['DATA_CONFIG']['MQTT_PORT']),))
-    mqtt_thread.daemon = True
-    mqtt_thread.start()
+    if CONFIG['DATA_CONFIG']['GATEWAY_CALLSIGN'] == 'n0call'.upper():
+        logger.info('MQTT disabled. External applications and networks will not be available.')
+    else:
+        mqtt_thread = threading.Thread(target=mqtt_main, args=(CONFIG['DATA_CONFIG']['MQTT_SERVER'],int(CONFIG['DATA_CONFIG']['MQTT_PORT']),))
+        mqtt_thread.daemon = True
+        mqtt_thread.start()
 
     # Used for misc timing events
     ten_loop_task = task.LoopingCall(ten_loop_func)

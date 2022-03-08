@@ -60,6 +60,34 @@
 </tbody>
 </table>
 <p>&nbsp;</p>
+
+
+<h2 style="text-align: center;"><strong>External Applications</strong></h2>
+<p>If configured, this gateway can send and receive SMS messages from other networks and applications. An external application may be a type of gateway, such as an email gateway, or some other information service. See the <a href="/external_services" rel="nofollow">External Services</a> page to see what is available.</p>
+<h4 style="text-align: center;">Social Status Commands</h4>
+<table data-toggle="table" data-pagination="false">
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>![SHORTCUT] [MESSAGE]</strong></td>
+<td>Send a message to an external application.</td>
+<td><em><code>!TST test</code></em></td>
+</tr>
+<tr>
+<td><strong>#[SHORTCUT] [DMR ID] [MESSAGE]</strong></td>
+<td>Send an SMS to another user on a different network.</td>
+<td><em><code>#DMRNET 1234567 Are you there?</code></em></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+
 <h2 style="text-align: center;"><strong>Tiny Pages</strong></h2>
 <p>Tiny Pages are statically retrievable pieces of information. A tiny page can be created and changed by a user in the web service. A tiny page can be retrieved via SMS with a simple command. Potential uses include help messages, net schedule messages, or whatever you can think of.</p>
 
@@ -121,7 +149,7 @@
 <tbody>
 <tr>
 <td><strong>*SS</strong></td>
-<td>Post a message to social status..</td>
+<td>Post a message to social status.</td>
 <td><em><code>*SS testing 123</code></em></td>
 </tr>
 <tr>

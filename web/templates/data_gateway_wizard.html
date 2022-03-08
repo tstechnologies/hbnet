@@ -5,9 +5,12 @@
 
 <br />
 
-<strong>Note: </strong> Setting the APRS Login Call to <strong>N0CALL</strong> will disable APRS features. You will still be able to see station positions on the map though.
+<strong>Note: </strong> Setting the APRS Login Call to <strong>N0CALL</strong> will disable APRS and MQTT (external application/network) features. You will still be able to see station positions on the map though.
 
 <strong>Note: </strong> Setting iGate Time to 0 will disable beaconing of iGate packets.
+
+<strong>Note: </strong> Leave MQTT Username and Password to use with servers that don't require authentication.
+
 
 <br />
 <br />
@@ -106,6 +109,44 @@
   <input type="text" id="igate_lon" name="igate_lon" class="form-control" aria-describedby="basic-addon1" value="00000.00W">
 </div>
 
+<br />  
+
+<br />
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">MQTT Callsign</span>
+  <input type="text" id="gateway_call" name="gateway_call" class="form-control" aria-describedby="basic-addon1" value="N0CALL">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">URL</span>
+  <input type="text" id="url" name="url" class="form-control" aria-describedby="basic-addon1" value="www.example.org">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">Description</span>
+  <input type="text" id="description" name="description" class="form-control" aria-describedby="basic-addon1" value="This is a network powered by HBNet.">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">MQTT Server</span>
+  <input type="text" id="mqtt_server" name="mqtt_server" class="form-control" aria-describedby="basic-addon1" value="mqtt.hbnet.xyz">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">MQTT Port</span>
+  <input type="text" id="mqtt_port" name="mqtt_port" class="form-control" aria-describedby="basic-addon1" value="1883">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">MQTT Username</span>
+  <input type="text" id="mqtt_user" name="mqtt_user" class="form-control" aria-describedby="basic-addon1" value="">
+</div>
+
+<div class="input-group mb-3">
+  <span class="input-group-text" id="basic-addon1">MQTT Password</span>
+  <input type="text" id="mqtt_password" name="mqtt_password" class="form-control" aria-describedby="basic-addon1" value="">
+</div>
 
 <br />  
   <p style="text-align: center;"><input class="btn btn-primary" type="submit" value="Save" /></form></p>

@@ -201,9 +201,10 @@ def build_config(_config_file):
 ##                    'DASHBOARD_URL': config.get(section, 'DASHBOARD_URL'),
 ##                    'SERVER_NAME': config.get(section, 'SERVER_NAME'),
 ##                    'RULES_PATH': config.get(section, 'RULES_PATH'),
+                    
                     'GATEWAY_CALLSIGN': config.get(section, 'GATEWAY_CALLSIGN'),
-                    'URL': config.get(section, 'URL'),
-                    'DESCRIPTION': config.get(section, 'DESCRIPTION'),
+##                    'URL': config.get(section, 'URL'),
+##                    'DESCRIPTION': config.get(section, 'DESCRIPTION'),
 
                     'MQTT_SERVER': config.get(section, 'MQTT_SERVER'),
                     'MQTT_PORT': config.get(section, 'MQTT_PORT'),

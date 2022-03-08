@@ -54,7 +54,7 @@ import os, ast
 from cryptography.fernet import Fernet
 
 peer_locations = {}
-hbnet_version = 'HWS 0.0.1-pre_pre_alpha'
+hbnet_version = 'HWS 0.0.1-pre_pre_alpha/MQTT'
 
 # Query radioid.net for list of IDs
 def get_ids(callsign):
@@ -4654,7 +4654,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 ##            s = ServerList.query.filter_by(name=request.args.get('add_data_options')).first()
             print(request.form)
             print(request.form.get('user_settings'))
-            add_data_options(request.args.get('add_data_options'), 'DATA_GATEWAY:data_id=' + request.form.get('data_id') + ':call_type=' + request.form.get('call_type') + ':aprs_login_call=' + request.form.get('aprs_login_call') + ':aprs_login_passcode=' + request.form.get('aprs_login_passcode') + ':aprs_server=' + request.form.get('aprs_server') + ':aprs_port=' + request.form.get('aprs_port') + ':default_ssid=' + request.form.get('default_ssid') + ':default_comment=' + request.form.get('default_comment') + ':aprs_filter=' + request.form.get('aprs_filter') + ':user_settings=' + request.form.get('user_settings') + ':igate_time=' + request.form.get('igate_time') + ':igate_icon=' + request.form.get('igate_icon') + ':igate_comment=' + request.form.get('igate_comment') + ':igate_lat=' + request.form.get('igate_lat') + ':igate_lon=' + request.form.get('igate_lon') + '')
+            add_data_options(request.args.get('add_data_options'), 'DATA_GATEWAY:data_id=' + request.form.get('data_id') + ':call_type=' + request.form.get('call_type') + ':aprs_login_call=' + request.form.get('aprs_login_call') + ':aprs_login_passcode=' + request.form.get('aprs_login_passcode') + ':aprs_server=' + request.form.get('aprs_server') + ':aprs_port=' + request.form.get('aprs_port') + ':default_ssid=' + request.form.get('default_ssid') + ':default_comment=' + request.form.get('default_comment') + ':aprs_filter=' + request.form.get('aprs_filter') + ':user_settings=' + request.form.get('user_settings') + ':igate_time=' + request.form.get('igate_time') + ':igate_icon=' + request.form.get('igate_icon') + ':igate_comment=' + request.form.get('igate_comment') + ':igate_lat=' + request.form.get('igate_lat') + ':igate_lon=' + request.form.get('igate_lon') + ';MQTT:gateway_callsign=' + request.form.get('gateway_call') + ':server=' + request.form.get('mqtt_server') + ':port=' + request.form.get('mqtt_port') + ':username=' + request.form.get('mqtt_user') + ':password=' + request.form.get('mqtt_password') + ':url=' + request.form.get('url') + ':description=' + request.form.get('description'))
 
             content = '''<h3 style="text-align: center;">Added data gateway options.</h3>
 <p style="text-align: center;">Redirecting in 3 seconds.</p>
@@ -7081,7 +7081,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     </tr>
     '''
                     web_output = '''
-    <h4 style="text-align: center;">External Services for: ''' + i.name + '''</h4>
+    <h4 style="text-align: center;">External Services for discovered: ''' + i.name + '''</h4>
     <table data-toggle="table" data-pagination="true" data-search="true">
     <thead>
     <tr>
