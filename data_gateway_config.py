@@ -203,11 +203,16 @@ def build_config(_config_file):
 ##                    'RULES_PATH': config.get(section, 'RULES_PATH'),
                     
                     'GATEWAY_CALLSIGN': config.get(section, 'GATEWAY_CALLSIGN'),
-##                    'URL': config.get(section, 'URL'),
-##                    'DESCRIPTION': config.get(section, 'DESCRIPTION'),
-
+                    'URL': config.get(section, 'URL'),
+                    'DESCRIPTION': config.get(section, 'DESCRIPTION'),
+                    'MQTT_USERNAME': config.get(section, 'MQTT_USERNAME'),
+                    'MQTT_PASSWORD': config.get(section, 'MQTT_PASSWORD'),
                     'MQTT_SERVER': config.get(section, 'MQTT_SERVER'),
                     'MQTT_PORT': config.get(section, 'MQTT_PORT'),
+                    'MQTT_USERNAME2': config.get(section, 'MQTT_USERNAME2'),
+                    'MQTT_PASSWORD2': config.get(section, 'MQTT_PASSWORD2'),
+                    'MQTT_SERVER2': config.get(section, 'MQTT_SERVER2'),
+                    'MQTT_PORT2': config.get(section, 'MQTT_PORT2'),
 
 
 

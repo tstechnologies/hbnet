@@ -148,8 +148,13 @@ def sms_type(sub, sms):
 
 ##mqtt_shortcut_gen = ''.join(random.choices(string.ascii_uppercase, k=4))
 
-def mqtt_main(broker_url = 'localhost', broker_port = 1883):
-    global mqtt_client
+def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localhost', broker_port = 1883, broker_url2 = 'localhost', broker_port2 = 1883):
+    global mqtt_client, mqtt_client2
+    if broker_url2 != '':
+        logger.info('Enabling MQTT Server 22')
+        mqtt_client2 = mqtt.Client(client_id = mqtt_shortcut_gen + '-' + str(random.randint(1,99)))
+    elif broker_url2 == '':
+        mqtt_client2 = ''
 ##    print(broker_port)
     # On connect, send announcement
     def on_connect(client, userdata, flags, rc):
@@ -157,6 +162,22 @@ def mqtt_main(broker_url = 'localhost', broker_port = 1883):
         logger.debug('Connected to MQTT server: ' + broker_url)
     def on_disconnect(client, userdata, flags, rc):
         logger.debug('Disconnected from MQTT server')
+    def mqtt_connect():
+        global mqtt_client2
+        print('connect')
+        # Pass MQTT server details to instrance           
+        if mqtt_user != '':
+            logger.info('MQTT User/Pass specified')
+            mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
+        if mqtt_user2 != '':
+            logger.info('MQTT User/Pass specified for server 2')
+            mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
+        mqtt_client.connect(broker_url, broker_port, keepalive = 30)
+        if broker_url2 == '':
+            mqtt_client2 = ''
+            logger.info('Second MQTT server not used')
+        elif broker_url2 != '':
+            mqtt_client2.connect(broker_url2, broker_port2, keepalive = 30)
 
     # Process received msg here
     def on_message(client, userdata, message):
@@ -192,35 +213,53 @@ def mqtt_main(broker_url = 'localhost', broker_port = 1883):
                     logger.error(e)
                     send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
             
-
     mqtt_client = mqtt.Client(client_id = mqtt_shortcut_gen + '-' + str(random.randint(1,99)))
+    if broker_url2 != '':
+        mqtt_client2.will_set("ANNOUNCE", json.dumps({mqtt_shortcut_gen:"LOST_CONNECTION"}), 0, False)
+        mqtt_client2.on_message = on_message
+        mqtt_client2.on_connect = on_connect
+        mqtt_client2.on_disconnect = on_disconnect
     # Last will and testament
     mqtt_client.will_set("ANNOUNCE", json.dumps({mqtt_shortcut_gen:"LOST_CONNECTION"}), 0, False)
     mqtt_client.on_message = on_message
     mqtt_client.on_connect = on_connect
     mqtt_client.on_disconnect = on_disconnect
-    mqtt_client.connect(broker_url, broker_port)
+    mqtt_connect()
 
     # Subscribe to:
     # Incoming messages
     mqtt_client.subscribe('MSG/' + mqtt_shortcut_gen + '/#', qos=0)
+    
     # Announcements for service/network discovery
     mqtt_client.subscribe("ANNOUNCE", qos=0)
+    
+
+    if broker_url2 != '':
+        mqtt_client2.subscribe('MSG/' + mqtt_shortcut_gen + '/#', qos=0)
+        mqtt_client2.subscribe("ANNOUNCE", qos=0)
+        mqtt_client2.loop_start()
 
     mqtt_client.loop_start()
+    
 
 def mqtt_send_msg(network_shortcut, rcv_dmr_id, snd_dmr_id, message):
     msg_dict = json.dumps({str(snd_dmr_id):message, 'network':mqtt_shortcut_gen}, indent = 4)
     mqtt_client.publish(topic='MSG/' + network_shortcut + '/' + str(rcv_dmr_id), payload=msg_dict, qos=0, retain=False)
+    if mqtt_client2 != '':
+        mqtt_client2.publish(topic='MSG/' + network_shortcut + '/' + str(rcv_dmr_id), payload=msg_dict, qos=0, retain=False)
     logger.info('Sent message to another network via MQTT: ' + network_shortcut)
     
 def mqtt_send_app(network_shortcut, snd_dmr_id, message):
     msg_dict = json.dumps({'dmr_id': str(snd_dmr_id), 'message':message, 'network':mqtt_shortcut_gen, 'sms_type':'unit'}, indent = 4)
     mqtt_client.publish(topic='APP/' + network_shortcut, payload=msg_dict, qos=0, retain=False)
+    if mqtt_client2 != '':
+        mqtt_client2.publish(topic='APP/' + network_shortcut, payload=msg_dict, qos=0, retain=False)
     logger.info('Sent message to external application via MQTT: ' + network_shortcut)
 
 def mqtt_announce():
     mqtt_client.publish(topic="ANNOUNCE", payload=json.dumps({'shortcut':mqtt_shortcut_gen, 'type': 'network', 'url':CONFIG['DATA_CONFIG']['URL'], 'description':CONFIG['DATA_CONFIG']['DESCRIPTION']}, indent = 4), qos=0, retain=False)
+    if mqtt_client2 != '':
+        mqtt_client2.publish(topic="ANNOUNCE", payload=json.dumps({'shortcut':mqtt_shortcut_gen, 'type': 'network', 'url':CONFIG['DATA_CONFIG']['URL'], 'description':CONFIG['DATA_CONFIG']['DESCRIPTION']}, indent = 4), qos=0, retain=False)
   
 
 def download_aprs_settings(_CONFIG):
@@ -579,14 +618,26 @@ def download_config(CONFIG_FILE, cli_file):
                     
                     if final_options[0] == 'gateway_callsign':
                         mqtt_server = corrected_config['DATA_CONFIG']['GATEWAY_CALLSIGN'] = final_options[1].upper()
-                    if final_options[0] == 'server':
-                        mqtt_server = corrected_config['DATA_CONFIG']['MQTT_SERVER'] = final_options[1]
-                    if final_options[0] == 'port':
-                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PORT'] = final_options[1]
                     if final_options[0] == 'url':
                         mqtt_port = corrected_config['DATA_CONFIG']['URL'] = final_options[1]
                     if final_options[0] == 'description':
                         mqtt_port = corrected_config['DATA_CONFIG']['DESCRIPTION'] = final_options[1]
+                    if final_options[0] == 'server':
+                        mqtt_server = corrected_config['DATA_CONFIG']['MQTT_SERVER'] = final_options[1]
+                    if final_options[0] == 'port':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PORT'] = final_options[1]
+                    if final_options[0] == 'username':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_USERNAME'] = final_options[1]
+                    if final_options[0] == 'password':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PASSWORD'] = final_options[1]
+                    if final_options[0] == 'server2':
+                        mqtt_server = corrected_config['DATA_CONFIG']['MQTT_SERVER2'] = final_options[1]
+                    if final_options[0] == 'port2':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PORT2'] = final_options[1]
+                    if final_options[0] == 'username2':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_USERNAME2'] = final_options[1]
+                    if final_options[0] == 'password2':
+                        mqtt_port = corrected_config['DATA_CONFIG']['MQTT_PASSWORD2'] = final_options[1]
             if 'DATA_GATEWAY:' in i:
 ##                print(i)
                 gateway_options = i[13:].split(':')
@@ -2085,7 +2136,7 @@ if __name__ == '__main__':
     if CONFIG['DATA_CONFIG']['GATEWAY_CALLSIGN'] == 'n0call'.upper():
         logger.info('MQTT disabled. External applications and networks will not be available.')
     else:
-        mqtt_thread = threading.Thread(target=mqtt_main, args=(CONFIG['DATA_CONFIG']['MQTT_SERVER'],int(CONFIG['DATA_CONFIG']['MQTT_PORT']),))
+        mqtt_thread = threading.Thread(target=mqtt_main, args=(CONFIG['DATA_CONFIG']['MQTT_USERNAME'],CONFIG['DATA_CONFIG']['MQTT_PASSWORD'],CONFIG['DATA_CONFIG']['MQTT_USERNAME2'],CONFIG['DATA_CONFIG']['MQTT_PASSWORD2'],CONFIG['DATA_CONFIG']['MQTT_SERVER'],int(CONFIG['DATA_CONFIG']['MQTT_PORT']),CONFIG['DATA_CONFIG']['MQTT_SERVER2'],int(CONFIG['DATA_CONFIG']['MQTT_PORT2']),))
         mqtt_thread.daemon = True
         mqtt_thread.start()
 
