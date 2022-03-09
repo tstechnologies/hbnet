@@ -123,12 +123,29 @@ __email__      = 'kf7eel@qsl.net'
 
 sms_seq_num = 0
 use_csbk = False
-hdr_type = ''
-btf = -1
 ssid = ''
 UNIT_MAP = {}
 PACKET_MATCH = {}
 mqtt_services = {}
+subscriber_format = {}
+btf = {}
+sub_hdr = {}
+packet_assembly = {}
+
+# Keep track of what user needs which SMS format
+
+def sms_type(sub, sms):
+    # Port 5016, specified in ETSI 361-3
+    if sms[40:48] == '13981398':
+        subscriber_format[sub] = 'etsi'
+    # Port 4007, Motorola
+    elif sms[40:48] == '0fa70fa7':
+        subscriber_format[sub] = 'motorola'
+    else:
+        subscriber_format[sub] = 'motorola'
+    logger.debug(subscriber_format)
+    
+
 ##mqtt_shortcut_gen = ''.join(random.choices(string.ascii_uppercase, k=4))
 
 def mqtt_main(broker_url = 'localhost', broker_port = 1883):
@@ -198,7 +215,7 @@ def mqtt_send_msg(network_shortcut, rcv_dmr_id, snd_dmr_id, message):
     logger.info('Sent message to another network via MQTT: ' + network_shortcut)
     
 def mqtt_send_app(network_shortcut, snd_dmr_id, message):
-    msg_dict = json.dumps({'dmr_id': str(snd_dmr_id), 'message':message, 'network':mqtt_shortcut_gen}, indent = 4)
+    msg_dict = json.dumps({'dmr_id': str(snd_dmr_id), 'message':message, 'network':mqtt_shortcut_gen, 'sms_type':'unit'}, indent = 4)
     mqtt_client.publish(topic='APP/' + network_shortcut, payload=msg_dict, qos=0, retain=False)
     logger.info('Sent message to external application via MQTT: ' + network_shortcut)
 
@@ -395,7 +412,7 @@ def send_known_services(CONFIG, _data):
     
     try:
         req = requests.post(user_man_url, data=json_object, headers={'Content-Type': 'application/json'})
-        logger.debug('Sent UNIT table')
+        logger.debug('Sent MQTT table')
 ##        resp = json.loads(req.text)
 ##        print(resp)
 ##        return resp['rules']
@@ -560,7 +577,6 @@ def download_config(CONFIG_FILE, cli_file):
                 for o in mqtt_options:
                     final_options = o.split('=')
                     
-                    print(final_options)
                     if final_options[0] == 'gateway_callsign':
                         mqtt_server = corrected_config['DATA_CONFIG']['GATEWAY_CALLSIGN'] = final_options[1].upper()
                     if final_options[0] == 'server':
@@ -574,7 +590,6 @@ def download_config(CONFIG_FILE, cli_file):
             if 'DATA_GATEWAY:' in i:
 ##                print(i)
                 gateway_options = i[13:].split(':')
-##                print(gateway_options)
 ##                print(gateway_options)
                 for o in gateway_options:
 ##                    print(o)
@@ -622,7 +637,7 @@ def download_config(CONFIG_FILE, cli_file):
 ##################################################################################################
 
 # Headers for GPS by model of radio:
-# AT-D878 - Compressed UDP
+# AT-D878 - Unconfirmed Data
 # MD-380 - Unified Data Transport
 
 
@@ -643,23 +658,11 @@ def decode_full(_data):
     return binlc
    
 
-n_packet_assembly = 0
-
-packet_assembly = ''
-
-final_packet = ''
-
 #Convert DMR packet to binary from MMDVM packet and remove Slot Type and EMB Sync stuff to allow for BPTC 196,96 decoding
 def bptc_decode(_data):
         binary_packet = bitarray(decode.to_bits(_data[20:]))
         del binary_packet[98:166]
         return decode_full(binary_packet)
-# Placeholder for future header id
-def header_ID(_data):
-    hex_hdr = str(ahex(bptc_decode(_data)))
-    return hex_hdr[2:6]
-    # Work in progress, used to determine data format
-##    pass
 
 def aprs_send(packet):
     if 'N0CALL' in aprs_callsign:
@@ -765,13 +768,12 @@ def user_setting_write(dmr_id, setting, value, call_type):
                 user_dict_file.close()
                 logger.info('User setting saved')
                 f.close()
-                packet_assembly = ''
             
 # Process SMS, do something bases on message
 def process_sms(_rf_src, sms, call_type, system_name):
     parse_sms = sms.split(' ')
     logger.debug(parse_sms)
-    logger.debug(call_type)
+##    logger.debug(call_type)
     # Social Status function
     if '*SS' == parse_sms[0]:
         s = ' '
@@ -783,6 +785,9 @@ def process_sms(_rf_src, sms, call_type, system_name):
     # Tiny Page query
     elif '?' in parse_sms[0]:
         send_sms_cmd(CONFIG, int_id(_rf_src), sms)
+        
+    elif parse_sms[0] == 'ECHO':
+        send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit', 'ECHO')
     
     elif parse_sms[0] == 'ID':
         logger.info(str(get_alias(int_id(_rf_src), subscriber_ids)) + ' - ' + str(int_id(_rf_src)))
@@ -880,16 +885,16 @@ def process_sms(_rf_src, sms, call_type, system_name):
             logger.error('Exception. Not uploaded')
             logger.error(error_exception)
             logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
-        packet_assembly = ''
+##        packet_assembly = ''
           
-    elif '#' == parse_sms[0][0:1]:
+    elif '.' == parse_sms[0][0:1]:
 ##        print(mqtt_services.keys())
 ##        if parse_sms[0][1:] in mqtt_services.keys():
         mqtt_send_msg(str(parse_sms[0])[1:], parse_sms[1], int_id(_rf_src), ' '.join(parse_sms[2:]))
 ##        else:
 ##            # Add error message
 ##            pass
-    elif '!' == parse_sms[0][0:1]:
+    elif '#' == parse_sms[0][0:1]:
 ##        print(mqtt_services.keys())
 ##        if parse_sms[0][1:] in mqtt_services.keys():
         mqtt_send_app(str(parse_sms[0])[1:], str(int_id(_rf_src)), ' '.join(parse_sms[1:]))
@@ -943,7 +948,6 @@ def process_sms(_rf_src, sms, call_type, system_name):
             logger.info('Exception. Command possibly not in list, or other error.')
             logger.info(error_exception)
 ##        logger.info(str(traceback.extract_tb(error_exception.__traceback__)))
-##        packet_assembly = ''
     else:
         pass
 
@@ -1043,6 +1047,7 @@ def create_crc16_csbk(fragment_input):
 ##    print(fragment_input)
     crc16_csbk = libscrc.gsm16(bytearray.fromhex(fragment_input))
     return fragment_input + re.sub('x', '0', str(hex(crc16_csbk ^ 0xa5a5))[-4:])
+
 def csbk_gen(to_id, from_id, tot_block):
     csbk_lst = ['BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080']
 
@@ -1055,8 +1060,22 @@ def csbk_gen(to_id, from_id, tot_block):
         send_seq_list = send_seq_list + block
         tot_block = tot_block - 1
 ##        print(block)
-    print(send_seq_list)
-    print('---===---')
+
+    return send_seq_list
+
+def csbk_gen2(to_id, from_id, tot_block):
+    csbk_lst = ['BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080']
+
+    send_seq_list = ''
+    tot_block = tot_block + 8
+    for block in csbk_lst:
+        print(str(ahex(tot_block.to_bytes(1, 'big')))[2:-1])
+        block = block + str(ahex(tot_block.to_bytes(1, 'big')))[2:-1] + to_id + from_id#str(ahex(int(tot_block))[2:-1])
+        block  = create_crc16_csbk(block)
+        send_seq_list = send_seq_list + block
+        tot_block = tot_block - 1
+##        print(block)
+
     return send_seq_list
 
 def mmdvm_encapsulate(dst_id, src_id, peer_id, _seq, _slot, _call_type, _dtype_vseq, _stream_id, _dmr_data):
@@ -1179,70 +1198,9 @@ def create_sms_seq(dst_id, src_id, peer_id, _slot, _call_type, dmr_string):
 ##            packet_write_file.write(str(mmdvm_send_seq))
             
     return mmdvm_send_seq
-##    return the_mmdvm_pkt
 
-### Built for max length msg, will improve later
-##def sms_headers(to_id, from_id):
-####    #ETSI 102 361-2 uncompressed ipv4
-####    # UDP header, src and dest ports are 4007, 0fa7
-####    udp_ports = '0fa70fa7'
-####    # Length, of what?
-####    udp_length = '00da'
-####    # Checksum
-####    udp_checksum = '4b37'
-####
-####    # IPV4
-####    #IPV4 version and header length, always 45
-####    ipv4_v_l = '45'
-####    #Type of service, always 00
-####    ipv4_svc = '00'
-####    #length, always 00ee
-####    ipv4_len = '00ee'
-####    #ID always 000d
-####    ipv4_id = '000d'
-####    #Flags and offset always0
-####    ipv4_flag_off = '0000'
-####    #TTL and Protocol always 4011, no matter what
-####    ipv4_ttl_proto = '4011'
-##    #ipv4 = '450000ee000d0000401100000c' + from_id + '0c' + to_id
-####    print(gen_sms_seq())
-##    ipv4 = '450000ee00' + gen_sms_seq() + '0000401100000c' + from_id + '0c' + to_id
-##    count_index = 0
-##    hdr_lst = []
-##    while count_index < len(ipv4):
-##        hdr_lst.append((ipv4[count_index:count_index + 4]))
-##        count_index = count_index + 4
-##    sum = 0
-##    for i in hdr_lst:
-##        sum = sum + int(i, 16)
-##    flipped = ''
-##    for i in str(bin(sum))[2:]:
-##        if i == '1':
-##            flipped = flipped + '0'
-##        if i == '0':
-##            flipped = flipped + '1'
-##    ipv4_chk_sum = str(hex(int(flipped, 2)))[2:]
-##    # UDP checksum is optional per ETSI, zero for now as Anytone is not affected.
-##    header = ipv4[:20] + ipv4_chk_sum + ipv4[24:] + '0fa70fa700da000000d0a00081040d000a'
-##    return header
-
-##def format_sms(msg, to_id, from_id, use_header = True):
-##    msg_bytes = str.encode(msg)
-##    encoded = "".join([str('00' + x) for x in re.findall('..',bytes.hex(msg_bytes))] )
-##    final = encoded
-##    while len(final) < 400:
-##        final = final + '002e'
-##    final = final + '0000000000000000000000'
-##    if use_header == False:
-##        headers = ''
-##    if use_header == True:
-##        headers = sms_headers(to_id, from_id)
-##    return headers + final
 
 def format_sms(msg, to_id, from_id, call_type, use_header = True):
-    msg_bytes = str.encode(msg)
-    encoded = "".join([str('00' + x) for x in re.findall('..',bytes.hex(msg_bytes))] )
-    final = encoded
 
     call_seq_num = gen_sms_seq()
 
@@ -1253,32 +1211,30 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
     src_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_src, 16)))
     dst_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_dest, 16)))
 
- 
-    # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
-    unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
-
-    hdr_seq_num = (ahex(int((int(call_seq_num, 16) + 128)).to_bytes(1, 'big')))
-##    print('-----------')
-##    print(int(call_seq_num, 16) + 128)
-##    print('-------------')
-    sms_header = '00' + str(ahex(unk_count))[2:-1] + 'a000' + str(hdr_seq_num)[2:-1] + '040d000a'
-
-   
-##    ip_udp = packet = IP(dst=dst_dmr_id, src=src_dmr_id)/UDP(sport=4007, dport=4007)/(bytes.fromhex('0012A00083040D000A') + msg.encode('utf-16') + bytes.fromhex('0000000000000000000000'))
-
-    ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, id=int(call_seq_num, 16))/UDP(sport=4007, dport=4007)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
-
+    if to_id not in subscriber_format.keys():
+        subscriber_format[to_id] = 'motorola'
+        
+    if subscriber_format[to_id] == 'etsi':
+        # Anytone "DMR Standard decodes utf-15 LE, not BE. BE is specified in ETSI 361-3
+        final = str(ahex(msg.encode('utf-16le')))[2:-1]
+        sms_header = '000d000a'
+        ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, ttl=1, id=int(call_seq_num, 16))/UDP(sport=5016, dport=5016)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
+        logger.debug('Sending in ETSI? format.')
+    elif subscriber_format[to_id] == 'motorola':
+        final = str(ahex(msg.encode('utf-16be')))[2:-1]
+        # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
+        unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
+##        hdr_seq_num = (ahex(int((int(call_seq_num, 16) + 128)).to_bytes(1, 'big')))
+        hdr_seq_num = (ahex(int((random.randint(1,7) + 128)).to_bytes(1, 'big')))
+        sms_header = '00' + str(ahex(unk_count))[2:-1] + 'a000' + str(hdr_seq_num)[2:-1] + '040d000a'
+        ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, ttl=1, id=int(call_seq_num, 16))/UDP(sport=5016, dport=5016)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
+        logger.debug('Sending in Motorola format')
+       
     header_bits = btf_poc(str(ahex(raw(ip_udp)))[2:-1])
-
-
     sms_complete_header = create_crc16(gen_header2(to_id, from_id, call_type, header_bits[1], header_bits[0]))
     sms_csbk = (csbk_gen(to_id, from_id, header_bits[0]))
     logger.debug(sms_complete_header)
 
-##    print(type(sms_csbk))
-##    print('---')
-##    print((sms_csbk))# + sms_complete_header))
-##    print('---')
 
     # Return corrected fragment with BTF and generate CRC16 with header
 
@@ -1469,6 +1425,7 @@ def ars_resp(msg, to_id, from_id, call_type, use_header = True):
 
 
     sms_complete_header = create_crc16(gen_header2(to_id, from_id, call_type, header_bits[1], header_bits[0]))
+    sms_csbk = (csbk_gen2(to_id, from_id, header_bits[0]))
     logger.debug(sms_complete_header)
 
 
@@ -1584,16 +1541,16 @@ def aprs_beacon_send():
 ##### DMR data function ####
 def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, mirror = False):
     # Capture data headers
-    global n_packet_assembly, hdr_type
+##    global hdr_type
     #logger.info(_dtype_vseq)
     #logger.info(_call_type)
     #logger.info(_frame_type)
 ##    print(int_id(_stream_id))
 ##    print((_seq))
     logger.info(strftime('%H:%M:%S - %m/%d/%y'))
-    #logger.info('Special debug for developement:')
-    logger.info(ahex(bptc_decode(_data)))
-    #logger.info(_rf_src)
+    logger.debug('Decoded data:')
+    logger.debug(ahex(bptc_decode(_data)))
+##    logger.info(_seq)
     #logger.info((ba2num(bptc_decode(_data)[8:12])))
 ################################################################3###### CHNGED #########
 ##    if int_id(_dst_id) == data_id:
@@ -1610,10 +1567,10 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
     if _call_type == call_type and header_ID(_data)[3] == '5' and ba2num(bptc_decode(_data)[69:72]) == 0 and ba2num(bptc_decode(_data)[8:12]) == 0 or (_call_type == 'vcsbk' and header_ID(_data)[3] == '5' and ba2num(bptc_decode(_data)[69:72]) == 0 and ba2num(bptc_decode(_data)[8:12]) == 0):
         global udt_block
         logger.info('MD-380 type UDT header detected. Very next packet should be location.')
-        hdr_type = '380'
-    if _dtype_vseq == 6 and hdr_type == '380' or _dtype_vseq == 'group' and hdr_type == '380':
+        sub_hdr[_rf_src] = '380'
+    if _dtype_vseq == 6 and sub_hdr[_rf_src] == '380' or _dtype_vseq == 'group' and sub_hdr[_rf_src] == '380':
         udt_block = 1
-    if _dtype_vseq == 7 and hdr_type == '380':
+    if _dtype_vseq == 7 and sub_hdr[_rf_src] == '380':
         udt_block = udt_block - 1
         if udt_block == 0:
             logger.info('MD-380 type packet. This should contain the GPS location.')
@@ -1632,9 +1589,6 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
             lon_min = ba2num(bptc_decode(_data)[46:52])
             lat_min_dec = str(ba2num(bptc_decode(_data)[24:38])).zfill(4)
             lon_min_dec = str(ba2num(bptc_decode(_data)[52:66])).zfill(4)
-            # Old MD-380 coordinate format, keep here until new is confirmed working.
-            #aprs_lat = str(str(lat_deg) + str(lat_min) + '.' + str(lat_min_dec)[0:2]).zfill(7) + lat_dir
-            #aprs_lon = str(str(lon_deg) + str(lon_min) + '.' + str(lon_min_dec)[0:2]).zfill(8) + lon_dir
             # Fix for MD-380 by G7HIF
             aprs_lat = str(str(lat_deg) + str(lat_min).zfill(2) + '.' + str(lat_min_dec)[0:2]).zfill(7) + lat_dir
             aprs_lon = str(str(lon_deg) + str(lon_min).zfill(2) + '.' + str(lon_min_dec)[0:2]).zfill(8) + lon_dir
@@ -1686,59 +1640,49 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                     logger.error(error_exception)
                     logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
                 udt_block = 1
-                hdr_type = ''
+                sub_hdr[_rf_src] = ''
         else:
               pass
     #NMEA type packets for Anytone like radios.
-    #if _call_type == call_type or (_call_type == 'vcsbk' and pckt_seq > 3): #int.from_bytes(_seq, 'big') > 3 ):
     # 14FRS2013 contributed improved header filtering, KF7EEL added conditions to allow both call types at the same time
     if _call_type == call_type or (_call_type == 'vcsbk' and pckt_seq > 3 and call_type != 'unit') or (_call_type == 'group' and pckt_seq > 3 and call_type != 'unit') or (_call_type == 'group' and pckt_seq > 3 and call_type == 'both') or (_call_type == 'vcsbk' and pckt_seq > 3 and call_type == 'both') or (_call_type == 'unit' and pckt_seq > 3 and call_type == 'both'): #int.from_bytes(_seq, 'big') > 3 ):
-        global packet_assembly, btf
+##        global btf
         if _dtype_vseq == 6 or _dtype_vseq == 'group':
-            global btf, hdr_start
+##            global hdr_start
             # Header is a "Defined Short Data", used by Hytera I suspect
             if ahex(bptc_decode(_data)[4:-88]) == b'd0':
                 logger.debug('Defined Short Data header detected.')
                 # Construct blocks to follow
-                btf = (ba2num(bptc_decode(_data)[2:-92] + bptc_decode(_data)[12:-80]))
-                hdr_type = 'dsd'
+                btf[_rf_src] = (ba2num(bptc_decode(_data)[2:-92] + bptc_decode(_data)[12:-80]))
+                sub_hdr[_rf_src] = 'dsd'
             # Everyone else
             else:
                 logger.debug('Unconfirmed Data header detected.')
-                hdr_start = str(header_ID(_data))
+##                hdr_start = str(header_ID(_data))
                 logger.info('Header from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)))
                 logger.debug(ahex(bptc_decode(_data)))
                 logger.info('Blocks to follow: ' + str(ba2num(bptc_decode(_data)[65:72])))
-                btf = ba2num(bptc_decode(_data)[65:72])
-                hdr_type = ''
-                print(ba2num(bptc_decode(_data)[12:16]))
-            # Try resetting packet_assembly
-            packet_assembly = ''
+                btf[_rf_src] = ba2num(bptc_decode(_data)[65:72])
+                sub_hdr[_rf_src] = ''
+
         # Data blocks at 1/2 rate, see https://github.com/g4klx/MMDVM/blob/master/DMRDefines.h for data types. _dtype_seq defined here also
         if _dtype_vseq == 7:
-            btf = btf - 1
-            logger.info('Block #: ' + str(btf))
+            btf[_rf_src] = btf[_rf_src] - 1
+            logger.info('Block #: ' + str(btf[_rf_src]))
             #logger.info(_seq)
-            logger.info('Data block from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)) + '. Destination: ' + str(int_id(_dst_id)))
-            logger.info(ahex(bptc_decode(_data)))
-            if _seq == 0:
-                n_packet_assembly = 0
-                packet_assembly = ''
-                
-            #if btf < btf + 1:
-            # 14FRS2013 removed condition, works great!
-            n_packet_assembly = n_packet_assembly + 1
-            packet_assembly = packet_assembly + str(bptc_decode(_data)) #str((decode_full_lc(b_packet)).strip('bitarray('))
+            logger.info('Data block from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + '. DMR ID: ' + str(int_id(_rf_src)) + '. Destination: ' + str(int_id(_dst_id)))             
+            if _rf_src not in packet_assembly.keys():
+                packet_assembly[_rf_src] = ''
+            packet_assembly[_rf_src] = packet_assembly[_rf_src] + str(ahex(bptc_decode(_data)))[2:-1] #str((decode_full_lc(b_packet)).strip('bitarray(')))
             # Use block 0 as trigger. $GPRMC must also be in string to indicate NMEA.
-            # This triggers the APRS upload
-            if btf == 0:
-                print(ahex(_rf_src))
-                final_packet = str(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly)).tobytes().decode('utf-8', 'ignore'))
-                sms_hex = str(ba2hx(bitarray(re.sub("\)|\(|bitarray|'", '', packet_assembly))))
-                sms_hex_string = re.sub("b'|'", '', str(sms_hex))
-                if hdr_type == 'dsd':
+            # This triggers the APRS upload or SMS decode
+            if btf[_rf_src] == 0:
+                sms_hex_string = packet_assembly[_rf_src]
+                # Determin SMS format
+                sms_type(str(ahex(_rf_src))[2:-1], sms_hex_string)
+                sms = codecs.decode(bytes.fromhex(''.join(sms_hex_string[:-8].split('00'))), 'utf-8', 'ignore')
+                if sub_hdr[_rf_src] == 'dsd':
                     logger.debug('Trimmed for Defined Short Data')
-                    print(hdr_type)
                     sms_hex_string = sms_hex_string[2:]
                 # Filter out ARS
                 # Look for port 4005 twice, and 'hello' - 000cf0, and UDP header in first 16 characters
@@ -1750,37 +1694,27 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                     if '000cf0' in sms_hex_string:
                         logger.info('Received ARS "hello"')
                         logger.debug('Attempt response')
-
 ##                        ars_response = (ars_resp('0002BF01', str(ahex(_rf_src))[2:-1], str(ahex(_dst_id))[2:-1], 1))
-
                         ars_response = (ars_resp('0002B700', str(ahex(_rf_src))[2:-1], str(ahex(_dst_id))[2:-1], 1))
-
                         ars_snd = create_sms_seq(int_id(_rf_src), int_id(_dst_id), int_id(_dst_id), _slot, 1, ars_response[1] + ars_response[0])
-                        print(ars_snd)
-
                         for i in ars_snd:
-                            print(ahex(bptc_decode(i)))
-##                            systems[UNIT_MAP[_rf_src][0]].send_system(i)
                             systems[UNIT_MAP[_rf_src][0]].send_system(i)
-
-                            
-
-
-                        
+##                            systems['LOCAL'].send_system(i)
+    
                 else:
                     #NMEA GPS sentence
-                    if '$GPRMC' in final_packet or '$GNRMC' in final_packet:
-                        logger.debug(final_packet + '\n')
+                    if '$GPRMC' in sms or '$GNRMC' in sms:
+                        logger.debug(sms + '\n')
                         # Eliminate excess bytes based on NMEA type
                         # GPRMC
-                        if 'GPRMC' in final_packet:
+                        if 'GPRMC' in sms:
                             logger.debug('GPRMC location')
                             #nmea_parse = re.sub('A\*.*|.*\$', '', str(final_packet))
-                            nmea_parse = re.sub('A\*.*|.*\$|\n.*', '', str(final_packet))
+                            nmea_parse = re.sub('A\*.*|.*\$|\n.*', '', str(sms))
                         # GNRMC
-                        if 'GNRMC' in final_packet:
+                        if 'GNRMC' in sms:
                             logger.debug('GNRMC location')
-                            nmea_parse = re.sub('.*\$|\n.*|V\*.*', '', final_packet)
+                            nmea_parse = re.sub('.*\$|\n.*|V\*.*', '', sms)
                         loc = pynmea2.parse(nmea_parse, check=False)
                         logger.debug('Latitude: ' + str(loc.lat) + str(loc.lat_dir) + ' Longitude: ' + str(loc.lon) + str(loc.lon_dir) + ' Direction: ' + str(loc.true_course) + ' Speed: ' + str(loc.spd_over_grnd) + '\n')
                         if mirror == False:
@@ -1838,35 +1772,28 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                         # Get callsign based on DMR ID
                         # End APRS-IS upload
                     # Assume this is an SMS message
-                    elif '$GPRMC' not in final_packet or '$GNRMC' not in final_packet:
+                    elif '$GPRMC' not in sms or '$GNRMC' not in sms:
                             logger.info('\nSMS detected. Attempting to parse.')
                             #logger.info(final_packet)
     ##                        logger.info('Attempting to find command...')
     ##                                sms = codecs.decode(bytes.fromhex(''.join(sms_hex[:-8].split('00'))), 'utf-8', 'ignore')
-                            sms = codecs.decode(bytes.fromhex(''.join(sms_hex_string[:-8].split('00'))), 'utf-8', 'ignore')
+##                            sms = codecs.decode(bytes.fromhex(''.join(sms_hex_string[:-8].split('00'))), 'utf-8', 'ignore')
                             msg_found = re.sub('.*\n', '', sms)
                             logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(msg_found) + '\n')
-                            
-    ##                        if int_id(_dst_id) == data_id:
+                           
                             if int_id(_dst_id) in data_id:
+                                print('process sms')
                                 process_sms(_rf_src, msg_found, _call_type, UNIT_MAP[_rf_src][0])
-    ##                        if int_id(_dst_id) != data_id:
                             if int_id(_dst_id) not in data_id:
                                 dashboard_sms_write(str(get_alias(int_id(_rf_src), subscriber_ids)), str(get_alias(int_id(_dst_id), subscriber_ids)), int_id(_dst_id), int_id(_rf_src), msg_found, time(), UNIT_MAP[_rf_src][0])
-                            #packet_assembly = ''
                             pass
-                        #logger.info(bitarray(re.sub("\)|\(|bitarray|'", '', str(bptc_decode(_data)).tobytes().decode('utf-8', 'ignore'))))
-                    #logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(sms) + '\n')
-                # Reset the packet assembly to prevent old data from returning.
-                # 14FRS2013 moved variable reset
-                hdr_start = ''
-                n_packet_assembly = 0	
-                packet_assembly = ''	
-                btf = 0
-            #logger.info(_seq)
-            #packet_assembly = '' #logger.info(_dtype_vseq)
-        #logger.info(ahex(bptc_decode(_data)).decode('utf-8', 'ignore'))
-        #logger.info(bitarray(re.sub("\)|\(|bitarray|'", '', str(bptc_decode(_data)).tobytes().decode('utf-8', 'ignore'))))
+
+                # Reset assembly
+                del packet_assembly[_rf_src]
+                del btf[_rf_src]
+                # Reset header type for next sequence
+                del sub_hdr[_rf_src]
+
 
 
 ######
@@ -1940,6 +1867,9 @@ class OBP(OPENBRIDGE):
         UNIT_MAP[_rf_src] = (self._system, time())
         if _rf_src not in PACKET_MATCH:
             PACKET_MATCH[_rf_src] = [_seq, time()]
+        if _rf_src not in sub_hdr.keys():
+            sub_hdr[_rf_src] = ''
+            logger.debug('Added blank hdr')
 
         # Check to see if we have already received this packet
         elif _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
@@ -1984,15 +1914,14 @@ class OBP(OPENBRIDGE):
 ##            print(ahex(bptc_decode(_data)))
                        
             if _mode == b'MDAT' or _mode == b'DATA':
-                print('MDAT')
+                logger.debug('MDAT')
                 if _rf_src not in PACKET_MATCH:
                     PACKET_MATCH[_rf_src] = [_seq, time()]
                 if _seq == PACKET_MATCH[_rf_src][0] and time() - 1 < PACKET_MATCH[_rf_src][1]:
-                    print('matched, dropping')
+                    logger.debug('Matched, dropping')
                     pass
 
                 else:
-                    print('no match')
                     if _mode == b'MDAT':
                         data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, True)
                     if _mode == b'DATA':
@@ -2007,6 +1936,10 @@ class HBP(HBSYSTEM):
 
     def dmrd_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data):
         UNIT_MAP[_rf_src] = (self._system, time())
+     # Set data header type
+        if _rf_src not in sub_hdr.keys():
+            sub_hdr[_rf_src] = ''
+            logger.debug('Added blank hdr')
 ##        logger.debug(ahex(_data))
         logger.debug('MMDVM RCVD')
         if _rf_src not in PACKET_MATCH:

@@ -7081,7 +7081,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     </tr>
     '''
                     web_output = '''
-    <h4 style="text-align: center;">External Services for discovered: ''' + i.name + '''</h4>
+    <h4 style="text-align: center;">External Services discovered: ''' + i.name + '''</h4>
     <table data-toggle="table" data-pagination="true" data-search="true">
     <thead>
     <tr>
