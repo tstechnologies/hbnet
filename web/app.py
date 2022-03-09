@@ -7064,7 +7064,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                         if services_dict[d]['type'] == 'network':
                             table_entry = table_entry + '''
     <tr>
-    <td><strong>#''' + services_dict[d]['shortcut'] + '''</strong></td>
+    <td><strong>.''' + services_dict[d]['shortcut'] + '''</strong></td>
     <td>Network</td>
     <td>''' + services_dict[d]['description'] + '''</td>
     <td><em><code><a href="http://''' + services_dict[d]['url'] + '''">''' + services_dict[d]['url'] + '''</a></code></em></td>
@@ -7073,7 +7073,7 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                         if services_dict[d]['type'] == 'app':
                             table_entry = table_entry + '''
     <tr>
-    <td><strong>!''' + services_dict[d]['shortcut'] + '''</strong></td>
+    <td><strong>#''' + services_dict[d]['shortcut'] + '''</strong></td>
     <td>Application</td>
 
     <td>''' + services_dict[d]['description'] + '''</td>
