@@ -7408,6 +7408,16 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
                     trim_bb()
                     response = 'rcvd'
             elif 'mb_add' in hblink_req:
+                if hblink_req['dst_callsign'] == 'admins':
+                    admins = UserRoles.query.filter_by(role_id=2).all()
+                    print(admins)
+                    for u in admins:
+                        user = User.query.filter(User.id == u.user_id).first()
+                        print(user.username)
+                        mailbox_add(hblink_req['src_callsign'], str(user.username).upper(), hblink_req['message'], hblink_req['src_dmr_id'], hblink_req['dst_dmr_id'], hblink_req['mb_add'], hblink_req['system_name'])
+
+                    response = 'rcvd'
+                else:
                     mailbox_add(hblink_req['src_callsign'], hblink_req['dst_callsign'], hblink_req['message'], hblink_req['src_dmr_id'], hblink_req['dst_dmr_id'], hblink_req['mb_add'], hblink_req['system_name'])
                     response = 'rcvd'
 

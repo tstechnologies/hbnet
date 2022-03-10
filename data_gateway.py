@@ -182,6 +182,7 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
     # Process received msg here
     def on_message(client, userdata, message):
         topic_list = str(message.topic).split('/')
+        print(topic_list)
         dict_payload = json.loads(message.payload.decode())
         logger.debug(dict_payload)
         if len(topic_list) == 1:
@@ -194,15 +195,22 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
                     logger.error('Error with MQTT service removal')
                     logger.error(e)
             elif topic_list[0] == 'ANNOUNCE':
-                logger.info('Service discovered: ' + dict_payload['shortcut'])
-                logger.debug((dict_payload))
-                mqtt_services[dict_payload['shortcut']] = dict_payload
-                logger.debug('Known services: ')
-                logger.debug(mqtt_services)
+                if '*NO_SMS' in dict_payload['shortcut']:
+                    logger.debug('Service discovered, NO_SMS flag, not adding to known services.')
+                else:
+                    logger.info('Service discovered: ' + dict_payload['shortcut'])
+                    logger.debug((dict_payload))
+                    mqtt_services[dict_payload['shortcut']] = dict_payload
+                    logger.debug('Known services: ')
+                    logger.debug(mqtt_services)
                 
         elif len(topic_list) > 1:
             # Incoming MSG
-            if topic_list[0] == 'MSG' and list(dict_payload.keys())[1] == 'network' and topic_list[1] == mqtt_shortcut_gen:
+            if topic_list[0] == 'ANNOUNCE' and topic_list[1] == 'MQTT':
+##                print(dict_payload)
+                send_mb(CONFIG, 'admins', 'MQTT Server', dict_payload['message'], 0, 0, 'MQTT Server')
+                logger.debug('Received MQTT server message.........................................................')
+            elif topic_list[0] == 'MSG' and list(dict_payload.keys())[1] == 'network' and topic_list[1] == mqtt_shortcut_gen:
                 try:
                     if mqtt_services[dict_payload['network']]['type'] == 'network':
                         send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
@@ -232,6 +240,9 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
     
     # Announcements for service/network discovery
     mqtt_client.subscribe("ANNOUNCE", qos=0)
+
+    # Announcements from MQTT server operator
+    mqtt_client.subscribe("ANNOUNCE/MQTT", qos=0)
     
 
     if broker_url2 != '':
@@ -939,19 +950,19 @@ def process_sms(_rf_src, sms, call_type, system_name):
 ##        packet_assembly = ''
           
     elif '.' == parse_sms[0][0:1]:
-##        print(mqtt_services.keys())
-##        if parse_sms[0][1:] in mqtt_services.keys():
-        mqtt_send_msg(str(parse_sms[0])[1:], parse_sms[1], int_id(_rf_src), ' '.join(parse_sms[2:]))
-##        else:
+        logger.debug('Known shortcuts: ' + str(mqtt_services.keys()))
+        if parse_sms[0][1:] in mqtt_services.keys():
+            mqtt_send_msg(str(parse_sms[0])[1:], parse_sms[1], int_id(_rf_src), ' '.join(parse_sms[2:]))
+        else:
 ##            # Add error message
-##            pass
+            pass
     elif '#' == parse_sms[0][0:1]:
-##        print(mqtt_services.keys())
-##        if parse_sms[0][1:] in mqtt_services.keys():
-        mqtt_send_app(str(parse_sms[0])[1:], str(int_id(_rf_src)), ' '.join(parse_sms[1:]))
-##        else:
-##            # Add error message
-##            pass
+        logger.debug('Known shortcuts: ' + str(mqtt_services.keys()))
+        if parse_sms[0][1:] in mqtt_services.keys():
+            mqtt_send_app(str(parse_sms[0])[1:], str(int_id(_rf_src)), ' '.join(parse_sms[1:]))
+        else:
+            # Add error message
+            pass
         
     elif '@' in parse_sms[0][0:1] and ' ' in sms: #'M-' not in parse_sms[1][0:2] or '@' not in parse_sms[0][1:]:
         #Example SMS text: @ARMDS This is a test.
@@ -1341,43 +1352,56 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
     if csbk == True:
         use_csbk = True
 
-    logger.debug('Generated:' + str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
-    if ascii_call_type == 'unit':
-        # We know where the user is
-        if bytes.fromhex(to_id) in UNIT_MAP:
-    ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
-            if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                    slot = 0
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
-                    for d in snd_seq_lst:
-                        print(ahex(d))
-                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
-                    logger.info('Sending on TS: ' + str(slot))
-            elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
-                    for d in snd_seq_lst:
-                        print(ahex((d)))
-                        systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
-                    logger.info('Sending on TS: ' + str(slot))
-      # We don't know where the user is
-        elif bytes.fromhex(to_id) not in UNIT_MAP:
+    # Split message in to multiple if msg characters > 100. 95 is for message count
+    text_list = []
+    text_block_count = 0
+##    sms_count = 1
+##    tot_blocks = len(msgprint(tot_blocks) / 100
+    while text_block_count < len(msg):
+##        text_list.append(str(sms_count) + '/' + str(tot_blocks) + ': ' + (msg[text_block_count:text_block_count + 95]))
+        text_list.append((msg[text_block_count:text_block_count + 95]))
+        text_block_count = text_block_count + 95
+##        sms_count = sms_count + 1
+
+    print(text_list)
+    for m in text_list:
+        print(m)
+        if ascii_call_type == 'unit':
+            # We know where the user is
+            if bytes.fromhex(to_id) in UNIT_MAP:
+        ##        print(CONFIG['SYSTEMS']) #[UNIT_MAP[bytes.fromhex(to_id)][2]]['MODE'])
+                if CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == False  and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                        slot = 0
+                        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(m), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(m), to_id, from_id, call_type)[0])))
+                        for d in snd_seq_lst:
+                            print(ahex(d))
+                            systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                        logger.info('Sending on TS: ' + str(slot))
+                elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
+                        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(m), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(m), to_id, from_id, call_type)[0])))
+                        for d in snd_seq_lst:
+                            print(ahex((d)))
+                            systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
+                        logger.info('Sending on TS: ' + str(slot))
+          # We don't know where the user is
+            elif bytes.fromhex(to_id) not in UNIT_MAP:
+                for s in CONFIG['SYSTEMS']:
+                    if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                        slot = 0
+                        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(m), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(m), to_id, from_id, call_type)[0])))
+                        for d in snd_seq_lst:
+                            systems[s].send_system(d)
+                        logger.info('User not in map. Sending on TS: ' + str(slot))
+                    elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
+                        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(m), to_id, from_id, call_type)[1]) + str(format_sms(str(m), to_id, from_id, call_type)[0]))
+                        for d in snd_seq_lst:
+                            systems[s].send_system(d)
+                        logger.info('User not in map. Sending on TS: ' + str(slot))
+        if ascii_call_type == 'group':
+            snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, format_sms(str(m), to_id, from_id, call_type)[1] + create_crc32(format_sms(str(m), to_id, from_id, call_type)[0]))
             for s in CONFIG['SYSTEMS']:
-                if CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == False and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                    slot = 0
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0])))
-                    for d in snd_seq_lst:
-                        systems[s].send_system(d)
-                    logger.info('User not in map. Sending on TS: ' + str(slot))
-                elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
-                    snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, str(format_sms(str(msg), to_id, from_id, call_type)[1]) + str(format_sms(str(msg), to_id, from_id, call_type)[0]))
-                    for d in snd_seq_lst:
-                        systems[s].send_system(d)
-                    logger.info('User not in map. Sending on TS: ' + str(slot))
-    if ascii_call_type == 'group':
-        snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, format_sms(str(msg), to_id, from_id, call_type)[1] + create_crc32(format_sms(str(msg), to_id, from_id, call_type)[0]))
-        for s in CONFIG['SYSTEMS']:
-            for d in snd_seq_lst:
-                systems[s].send_system(d)
+                for d in snd_seq_lst:
+                    systems[s].send_system(d)
 
 
 ##    if ascii_call_type == 'unit':
