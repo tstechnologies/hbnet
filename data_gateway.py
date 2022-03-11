@@ -132,6 +132,8 @@ btf = {}
 sub_hdr = {}
 packet_assembly = {}
 
+pistar_overflow = 0.1
+
 # Keep track of what user needs which SMS format
 
 def sms_type(sub, sms):
@@ -1363,14 +1365,14 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                         for d in snd_seq_lst:
                             systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
-                            sleep(0.1)
+                            sleep(pistar_overflow)
                         logger.info('Sending on TS: ' + str(slot))
                 elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
                         snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, snd_sms)
                         for d in snd_seq_lst:
                             systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
-                            sleep(0.1)
+                            sleep(pistar_overflow)
                         logger.info('Sending on TS: ' + str(slot))
           # We don't know where the user is
             elif bytes.fromhex(to_id) not in UNIT_MAP:
@@ -1381,14 +1383,14 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                         for d in snd_seq_lst:
                             systems[s].send_system(d)
                           # Sleep to prevent overflowing of Pi-Star buffer
-                            sleep(0.1)
+                            sleep(pistar_overflow)
                         logger.info('User not in map. Sending on TS: ' + str(slot))
                     elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
                         snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, snd_sms)
                         for d in snd_seq_lst:
                             systems[s].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
-                            sleep(0.1)
+                            sleep(pistar_overflow)
                         logger.info('User not in map. Sending on TS: ' + str(slot))
         if ascii_call_type == 'group':
             snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, snd_sms)
@@ -1396,7 +1398,7 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                 for d in snd_seq_lst:
                     systems[s].send_system(d)
                     # Sleep to prevent overflowing of Pi-Star buffer
-                    sleep(0.1)
+                    sleep(pistar_overflow
 
 
 ##    if ascii_call_type == 'unit':
@@ -1482,7 +1484,7 @@ def ars_resp(msg, to_id, from_id, call_type, use_header = True):
 ##    # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
 ##    unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
 
-    hdr_seq_num = (ahex(int((int(call_seq_num, 16) + 128)).to_bytes(1, 'big')))
+    hdr_seq_num = (ahex(int(((random.randint(1,7) + 128)).to_bytes(1, 'big'))))
 
 ##    sms_header = '00' + str(ahex(unk_count))[2:-1] + 'a000' + str(hdr_seq_num)[2:-1] + '040d000a'
 
@@ -1772,7 +1774,7 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                         ars_snd = create_sms_seq(int_id(_rf_src), int_id(_dst_id), int_id(_dst_id), _slot, 1, ars_response[2] + ars_response[1] + ars_response[0])
                         for i in ars_snd:
                                                         # Sleep to prevent overflowing of Pi-Star buffer
-                            sleep(0.1)
+                            sleep(pistar_overflow)
                             systems[UNIT_MAP[_rf_src][0]].send_system(i)
 ##                            systems['LOCAL'].send_system(i)
     
