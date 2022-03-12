@@ -127,7 +127,7 @@ ssid = ''
 UNIT_MAP = {}
 PACKET_MATCH = {}
 mqtt_services = {}
-subscriber_format = {}
+##subscriber_format = {}
 btf = {}
 sub_hdr = {}
 packet_assembly = {}
@@ -139,6 +139,7 @@ pistar_overflow = 0.1
 def sms_type(sub, sms):
     # Port 5016, specified in ETSI 361-3
     # Aparently some radios use UTF-16LE
+    subscriber_format = sms_format_retrieve('')
     if sms[40:48] == '13981398' and sms[66:68] == '00':
         subscriber_format[sub] = 'etsi_le'
     # Also, attempt for UTF-16BE
@@ -150,6 +151,24 @@ def sms_type(sub, sms):
     else:
         subscriber_format[sub] = 'motorola'
     logger.debug(subscriber_format)
+
+    with open('./subscriber_sms_formats.txt', 'w') as sms_form_file:
+        sms_form_file.write(str(subscriber_format))
+        sms_form_file.close()
+        
+def sms_format_man(sub, type_sms):
+    subscriber_format = sms_format_retrieve('')
+    subscriber_format[to_id] = type_sms
+    with open('./subscriber_sms_formats.txt', 'w') as sms_form_file:
+        sms_form_file.write(str(subscriber_format))
+        sms_form_file.close()
+
+def sms_format_retrieve(sub):
+    format_dict = ast.literal_eval(os.popen('cat ./subscriber_sms_formats.txt').read())
+    if sub != '':
+        return format_dict[sub]
+    else:
+        return format_dict
     
 
 ##mqtt_shortcut_gen = ''.join(random.choices(string.ascii_uppercase, k=4))
@@ -1268,19 +1287,20 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
     src_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_src, 16)))
     dst_dmr_id = str(ipaddress.IPv4Address(int(hex_2_ip_dest, 16)))
 
-    if to_id not in subscriber_format.keys():
-        subscriber_format[to_id] = 'motorola'
+    sms_form = sms_format_retrieve('')
+    if to_id not in sms_form.keys():
+        sms_format_man(to_id, 'motorola')
         
-    if 'etsi_' in subscriber_format[to_id]: # == 'etsi_le':
+    if 'etsi_' in sms_format_retrieve(to_id): # == 'etsi_le':
         # Anytone "DMR Standard decodes utf-15 LE, not BE. BE is specified in ETSI 361-3
-        if subscriber_format[to_id] == 'etsi_le':
+        if sms_format_retrieve(to_id) == 'etsi_le':
             final = str(ahex(msg.encode('utf-16le')))[2:-1]
-        if subscriber_format[to_id] == 'etsi_be':
+        if sms_format_retrieve(to_id) == 'etsi_be':
             final = str(ahex(msg.encode('utf-16be')))[2:-1]
         sms_header = '000d000a'
         ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, ttl=1, id=int(call_seq_num, 16))/UDP(sport=5016, dport=5016)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
         logger.debug('Sending in ETSI? format.')
-    elif subscriber_format[to_id] == 'motorola':
+    elif sms_format_retrieve(to_id) == 'motorola':
         final = str(ahex(msg.encode('utf-16be')))[2:-1]
         # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
         unk_count = int((len(msg) + 4) * 2).to_bytes(1, 'big')
@@ -2183,6 +2203,14 @@ if __name__ == '__main__':
     ten_loop_task = task.LoopingCall(ten_loop_func)
     ten_loop = ten_loop_task.start(600)
     ten_loop.addErrback(loopingErrHandle)
+
+    if Path('./subscriber_sms_formats.txt').is_file():
+        pass
+    else:
+        Path('./subscriber_sms_formats.txt').touch()
+        with open('./subscriber_sms_formats.txt', 'w') as sub_form_file:
+                sub_form_file.write("{b'01':'motorola'}")
+                sub_form_file.close() 
 
     if 'N0CALL' in aprs_callsign:
         logger.info('APRS callsign set to N0CALL, packet not sent.')
