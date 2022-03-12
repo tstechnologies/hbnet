@@ -138,8 +138,12 @@ pistar_overflow = 0.1
 
 def sms_type(sub, sms):
     # Port 5016, specified in ETSI 361-3
-    if sms[40:48] == '13981398':
-        subscriber_format[sub] = 'etsi'
+    # Aparently some radios use UTF-16LE
+    if sms[40:48] == '13981398' and sms[66:68] == '00':
+        subscriber_format[sub] = 'etsi_le'
+    # Also, attempt for UTF-16BE
+    elif sms[40:48] == '13981398' and sms[64:66] == '00':
+        subscriber_format[sub] = 'etsi_be'
     # Port 4007, Motorola
     elif sms[40:48] == '0fa70fa7':
         subscriber_format[sub] = 'motorola'
@@ -1112,10 +1116,16 @@ def create_crc16_csbk(fragment_input):
     return fragment_input + re.sub('x', '0', str(hex(crc16_csbk ^ 0xa5a5))[-4:])
 
 def csbk_gen2(to_id, from_id, tot_block):
-    csbk_lst = ['BD0080', 'BD0080', 'BD0080', 'BD0080', 'BD0080']
+    csbk_lst = []
+    csbk_pk = 'BD0080'
+    csbk_n = 0
+    csbk_tot = 2
+    while csbk_n < csbk_tot:
+        csbk_lst.append(csbk_pk)
+        csbk_n = csbk_n + 1
 
     send_seq_list = ''
-    tot_block = tot_block + 5
+    tot_block = tot_block + csbk_tot
     for block in csbk_lst:
         block = block + str(ahex(tot_block.to_bytes(1, 'big')))[2:-1] + to_id + from_id#str(ahex(int(tot_block))[2:-1])
         block  = create_crc16_csbk(block)
@@ -1261,9 +1271,12 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
     if to_id not in subscriber_format.keys():
         subscriber_format[to_id] = 'motorola'
         
-    if subscriber_format[to_id] == 'etsi':
+    if 'etsi_' in subscriber_format[to_id]: # == 'etsi_le':
         # Anytone "DMR Standard decodes utf-15 LE, not BE. BE is specified in ETSI 361-3
-        final = str(ahex(msg.encode('utf-16le')))[2:-1]
+        if subscriber_format[to_id] == 'etsi_le':
+            final = str(ahex(msg.encode('utf-16le')))[2:-1]
+        if subscriber_format[to_id] == 'etsi_be':
+            final = str(ahex(msg.encode('utf-16be')))[2:-1]
         sms_header = '000d000a'
         ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, ttl=1, id=int(call_seq_num, 16))/UDP(sport=5016, dport=5016)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
         logger.debug('Sending in ETSI? format.')
@@ -1398,7 +1411,7 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                 for d in snd_seq_lst:
                     systems[s].send_system(d)
                     # Sleep to prevent overflowing of Pi-Star buffer
-                    sleep(pistar_overflow
+                    sleep(pistar_overflow)
 
 
 ##    if ascii_call_type == 'unit':
