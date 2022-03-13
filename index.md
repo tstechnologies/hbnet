@@ -1,3 +1,5 @@
+# This site is outdated and moving, see [the wiki](https://github.com/kf7eel/hbnet/wiki) or [hbnet.xyz](https://hbnet.xyz) for more.
+
 # GPS/Data Application
 ----
 
