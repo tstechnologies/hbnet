@@ -75,6 +75,8 @@ from socket import gethostbyname
 from setproctitle import setproctitle
 
 import copy
+from pathlib import Path
+
 
 
 
@@ -430,6 +432,14 @@ def config_reports(_config, _factory):
         reporting.start(_config['REPORTS']['REPORT_INTERVAL'])
 
     return report_server
+# Send peer data that needs to be sent to APRS
+def svrd_send_aprs_peer(_svrd_data):
+    _svrd_packet = SVRD
+    for system in CONFIG['SYSTEMS']:
+        if CONFIG['SYSTEMS'][system]['ENABLED']:
+                if CONFIG['SYSTEMS'][system]['MODE'] == 'OPENBRIDGE':
+                    if 'PEER_APRS' in CONFIG['SYSTEMS'][system]['OTHER_OPTIONS']:
+                        systems[system].send_system(SVRD + b'APRS' + str.encode(str(_svrd_data)))
 
 # Send data to all OBP connections that have an encryption key. Data such as subscribers are sent to other HBNet servers.
 def svrd_send_all(_svrd_data):
@@ -445,8 +455,8 @@ def mirror_traffic(_data):
     for system in CONFIG['SYSTEMS']:
         if CONFIG['SYSTEMS'][system]['ENABLED']:
                 if CONFIG['SYSTEMS'][system]['MODE'] == 'OPENBRIDGE':
-                    print(CONFIG['SYSTEMS'][system]['OTHER_OPTIONS'])
-                    if 'MIRROR_ALL_TRAFFIC' in CONFIG['SYSTEMS'][system]['OTHER_OPTIONS']:
+##                    print(CONFIG['SYSTEMS'][system]['OTHER_OPTIONS'])
+                    if 'MIRROR_DATA' in CONFIG['SYSTEMS'][system]['OTHER_OPTIONS']:
                         systems[system].send_system(SVRD + b'MDAT' + _data)
                     
 
@@ -526,6 +536,7 @@ def ten_loop_func():
 # Run this every minute for rule timer updates
 def rule_timer_loop(unit_flood_time):
     global UNIT_MAP
+##    print(HBSYSTEM('HOTSPOT', CONFIG, '')._peers)
     logger.debug('(ROUTER) routerHBP Rule timer loop started')
     _now = time()
     #This is a good place to get and modify rules for users
@@ -582,13 +593,24 @@ def rule_timer_loop(unit_flood_time):
     if CONFIG['REPORTS']['REPORT']:
         report_server.send_clients(b'bridge updated')
 
+    # Send PEER info to data gateway for APRS packet generation
+    try:    
+        for system in CONFIG['SYSTEMS']:
+            if CONFIG['SYSTEMS'][system]['ENABLED']:
+                    if CONFIG['SYSTEMS'][system]['MODE'] == 'MASTER' or CONFIG['SYSTEMS'][system]['MODE'] == 'PROXY':
+                        if CONFIG['SYSTEMS'][system]['STATIC_APRS_POSITION_ENABLED'] == True:
+                            dict_data = ast.literal_eval(os.popen('cat /tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/' + system)).read())
+                            svrd_send_aprs_peer(dict_data)
+    except Exception as e:
+        logger.error(e)
+
 
 # run this every 10 seconds to trim orphaned stream ids
 def stream_trimmer_loop():
     ping(CONFIG)
     logger.debug('(ROUTER) Trimming inactive stream IDs from system lists')
     _now = time()
-       
+
     for system in systems:
         # HBP systems, master and peer
         if CONFIG['SYSTEMS'][system]['MODE'] != 'OPENBRIDGE':
@@ -1593,6 +1615,7 @@ if __name__ == '__main__':
         logger.info('(GLOBAL) SHUTDOWN: CONFBRIDGE IS TERMINATING WITH SIGNAL %s', str(_signal))
         hblink_handler(_signal, _frame)
         logger.info('(GLOBAL) SHUTDOWN: ALL SYSTEM HANDLERS EXECUTED - STOPPING REACTOR')
+        os.popen('rm /tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/*'))
         reactor.stop()
 
     # Set signal handers so that we can gracefully exit if need be
@@ -1733,4 +1756,12 @@ if __name__ == '__main__':
 ##    if LOCAL_CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED']:
 ##        with open(CONFIG['WEB_SERVICE']['BURN_FILE'], 'w') as f:
 ##            f.write(str(download_burnlist(CONFIG)))
+    
+    # Create folder so hbnet.py can access list PEER connections
+    print(CONFIG['LOGGER']['LOG_NAME'])
+    if Path('/tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/')).exists():
+        pass
+    else:
+        Path('/tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/')).mkdir()
+        
     reactor.run()

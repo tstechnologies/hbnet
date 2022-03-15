@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
 
 #### Modules for data gateway ###
 # modules from DATA_CONFIG.py
-from bitarray import bitarray
 from binascii import b2a_hex as ahex
 import re
 ##from binascii import a2b_hex as bhex
@@ -79,11 +78,6 @@ try:
     import maidenhead as mh
 except:
     logger.error('Error importing maidenhead module, make sure it is installed.')
-# Module for sending email
-try:
-    import smtplib
-except:
-    logger.error('Error importing smtplib module, make sure it is installed.')
 
 #Modules for APRS settings
 import ast
@@ -133,6 +127,8 @@ sub_hdr = {}
 packet_assembly = {}
 
 pistar_overflow = 0.1
+
+peer_aprs = {}
 
 # Keep track of what user needs which SMS format
 
@@ -1645,6 +1641,8 @@ def aprs_beacon_send():
     aprslib.parse(beacon_packet)
     aprs_send(beacon_packet)
     logger.debug(beacon_packet)
+    peer_aprs_packets()
+    logger.info('Uploaded PEER APRS positions')
 
 ##### DMR data function ####
 def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _frame_type, _dtype_vseq, _stream_id, _data, mirror = False):
@@ -1965,7 +1963,42 @@ def rule_timer_loop():
             logger.error('Send que error')
             logger.error(e)
 
+def peer_aprs_packets():
+    for i in peer_aprs.items():
+        for h in i[1].items():
+            lat = decdeg2dms(float(h[1]['lat']))
+            lon = decdeg2dms(float(h[1]['lon']))
+            if lon[0] < 0:
+                lon_dir = 'W'
+            if lon[0] > 0:
+                lon_dir = 'E'
+            if lat[0] < 0:
+                lat_dir = 'S'
+            if lat[0] > 0:
+                lat_dir = 'N'
 
+            aprs_lat = str(str(re.sub('\..*|-', '', str(lat[0]))).zfill(2) + str(re.sub('\..*', '', str(lat[1])).zfill(2) + '.')) + str(re.sub('\..*', '', str(lat[2])).zfill(2)) + lat_dir
+            aprs_lon = str(str(re.sub('\..*|-', '', str(lon[0]))).zfill(3) + str(re.sub('\..*', '', str(lon[1])).zfill(2) + '.')) + str(re.sub('\..*', '', str(lon[2])).zfill(2)) + lon_dir
+
+            if len(str(h[0])) > 7:
+                ending = int(str(h[0])[-2:])
+                if ending in range(1, 25):
+                    ssid = str(string.ascii_uppercase[ending - 1])
+                else:
+                    ssid = 'A'
+            else:
+                ssid = 'A'
+            aprs_loc_packet = str(h[1]['call'] + '-' + ssid + '>APHBL3,TCPIP*:/' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(aprs_lat) + '\\' + str(aprs_lon) + '&' + '/' + str(h[0]) + ' - '  + str(h[1]['description']))
+            logger.debug(aprs_loc_packet)
+            try:
+                aprslib.parse(aprs_loc_packet)
+                aprs_send(aprs_loc_packet)
+            except Exception as e:
+                logger.error(e)
+
+##
+##                print(lat)
+####                print(lon)
     
 class OBP(OPENBRIDGE):
 
@@ -1995,8 +2028,14 @@ class OBP(OPENBRIDGE):
 
     def svrd_received(self, _mode, _data):
         logger.debug('SVRD RCV')
+        print(_mode)
         if _mode == b'UNIT':
-            UNIT_MAP[_data] = (self._system, time())           
+            UNIT_MAP[_data] = (self._system, time())
+        if _mode == b'APRS':
+##            print(_data)
+##            print(self._system)
+            peer_aprs[self._system] = ast.literal_eval(_data.decode('utf-8'))
+            
         if _mode == b'DATA' or _mode == b'MDAT':
 ##            print(ahex(_data))
         # DMR Data packet, sent via SVRD
