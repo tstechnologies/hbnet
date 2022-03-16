@@ -12,5 +12,5 @@ resettabletimer
 cryptography
 setproctitle
 scapy
-paho.mqtt
+paho-mqtt
 
