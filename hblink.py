@@ -96,10 +96,12 @@ def decrypt_packet(key, message):
 
 def write_peer_file(master, peer_dict, CONFIG):
     # Pull stuff for aprs out
-    print(peer_dict)
+    if Path('/tmp/' + CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/' + master).is_file():
+        pass
+    else:
+        Path('/tmp/' + CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/' + master).touch()
     new_peers = {}
     for d in peer_dict.items():
-        print(d[1])
         new_peers[int_id(d[0])] = {'call': str(d[1]['CALLSIGN'].decode('utf-8')).strip(' '), 'lat':str(d[1]['LATITUDE'].decode('utf-8')), 'lon':str(d[1]['LONGITUDE'].decode('utf-8')), 'description':str(d[1]['DESCRIPTION'].decode('utf-8'))}
     with open('/tmp/' + CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/' + master, 'w') as peer_file:
         peer_file.write(str(new_peers))

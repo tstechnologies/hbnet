@@ -172,7 +172,7 @@ def sms_format_retrieve(sub):
 def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localhost', broker_port = 1883, broker_url2 = 'localhost', broker_port2 = 1883):
     global mqtt_client, mqtt_client2
     if broker_url2 != '':
-        logger.info('Enabling MQTT Server 22')
+        logger.info('Enabling MQTT Server 2')
         mqtt_client2 = mqtt.Client(client_id = mqtt_shortcut_gen + '-' + str(random.randint(1,99)))
     elif broker_url2 == '':
         mqtt_client2 = ''
@@ -913,8 +913,8 @@ def process_sms(_rf_src, sms, call_type, system_name):
     elif '*MH' in parse_sms[0]:
         grid_square = parse_sms[1]
         if len(grid_square) < 6:
-            pass
-        else:
+            send_sms(False, int_id(_rf_src), data_id[0], data_id[0], 'unit',  'Grid square needs to be 6 characters.')
+        elif len(grid_square) > 5:
             lat = decdeg2dms(mh.to_location(grid_square)[0])
             lon = decdeg2dms(mh.to_location(grid_square)[1])
            
@@ -930,44 +930,44 @@ def process_sms(_rf_src, sms, call_type, system_name):
             #logger.info(lat_dir)
             aprs_lat = str(str(re.sub('\..*|-', '', str(lat[0]))).zfill(2) + str(re.sub('\..*', '', str(lat[1])).zfill(2) + '.')) + '  ' + lat_dir
             aprs_lon = str(str(re.sub('\..*|-', '', str(lon[0]))).zfill(3) + str(re.sub('\..*', '', str(lon[1])).zfill(2) + '.')) + '  ' + lon_dir
-        logger.debug('Latitude: ' + str(aprs_lat))
-        logger.debug('Longitude: ' + str(aprs_lon))
-        # 14FRS2013 simplified and moved settings retrieval
-        user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())	
-        if int_id(_rf_src) not in user_settings:	
-            ssid = str(user_ssid)	
-            icon_table = '/'	
-            icon_icon = '['	
-            comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src)) 	
-        else:	
-            if user_settings[int_id(_rf_src)][1]['ssid'] == '':	
-                ssid = user_ssid	
-            if user_settings[int_id(_rf_src)][3]['comment'] == '':	
-                comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))	
-            if user_settings[int_id(_rf_src)][2]['icon'] == '':	
+            logger.debug('Latitude: ' + str(aprs_lat))
+            logger.debug('Longitude: ' + str(aprs_lon))
+            # 14FRS2013 simplified and moved settings retrieval
+            user_settings = ast.literal_eval(os.popen('cat ' + user_settings_file).read())	
+            if int_id(_rf_src) not in user_settings:	
+                ssid = str(user_ssid)	
                 icon_table = '/'	
                 icon_icon = '['	
-            if user_settings[int_id(_rf_src)][2]['icon'] != '':	
-                icon_table = user_settings[int_id(_rf_src)][2]['icon'][0]	
-                icon_icon = user_settings[int_id(_rf_src)][2]['icon'][1]	
-            if user_settings[int_id(_rf_src)][1]['ssid'] != '':	
-                ssid = user_settings[int_id(_rf_src)][1]['ssid']	
-            if user_settings[int_id(_rf_src)][3]['comment'] != '':	
-                comment = user_settings[int_id(_rf_src)][3]['comment']	
-        aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(aprs_lat) + icon_table + str(aprs_lon) + icon_icon + '/' + str(comment)
-        logger.info(aprs_loc_packet)
-        logger.debug('User comment: ' + comment)
-        logger.debug('User SSID: ' + ssid)
-        logger.debug('User icon: ' + icon_table + icon_icon)
-        try:
-            aprslib.parse(aprs_loc_packet)
-            aprs_send(aprs_loc_packet)
-            dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, aprs_lat, aprs_lon, time(), comment, int_id(_rf_src))
-            logger.info('Sent maidenhed position to APRS')
-        except Exception as error_exception:
-            logger.error('Exception. Not uploaded')
-            logger.error(error_exception)
-            logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
+                comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src)) 	
+            else:	
+                if user_settings[int_id(_rf_src)][1]['ssid'] == '':	
+                    ssid = user_ssid	
+                if user_settings[int_id(_rf_src)][3]['comment'] == '':	
+                    comment = aprs_comment + ' DMR ID: ' + str(int_id(_rf_src))	
+                if user_settings[int_id(_rf_src)][2]['icon'] == '':	
+                    icon_table = '/'	
+                    icon_icon = '['	
+                if user_settings[int_id(_rf_src)][2]['icon'] != '':	
+                    icon_table = user_settings[int_id(_rf_src)][2]['icon'][0]	
+                    icon_icon = user_settings[int_id(_rf_src)][2]['icon'][1]	
+                if user_settings[int_id(_rf_src)][1]['ssid'] != '':	
+                    ssid = user_settings[int_id(_rf_src)][1]['ssid']	
+                if user_settings[int_id(_rf_src)][3]['comment'] != '':	
+                    comment = user_settings[int_id(_rf_src)][3]['comment']	
+            aprs_loc_packet = str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid + '>APHBL3,TCPIP*:@' + str(datetime.datetime.utcnow().strftime("%H%M%Sh")) + str(aprs_lat) + icon_table + str(aprs_lon) + icon_icon + '/' + str(comment)
+            logger.info(aprs_loc_packet)
+            logger.debug('User comment: ' + comment)
+            logger.debug('User SSID: ' + ssid)
+            logger.debug('User icon: ' + icon_table + icon_icon)
+            try:
+                aprslib.parse(aprs_loc_packet)
+                aprs_send(aprs_loc_packet)
+                dashboard_loc_write(str(get_alias(int_id(_rf_src), subscriber_ids)) + '-' + ssid, aprs_lat, aprs_lon, time(), comment, int_id(_rf_src))
+                logger.info('Sent maidenhed position to APRS')
+            except Exception as error_exception:
+                logger.error('Exception. Not uploaded')
+                logger.error(error_exception)
+                logger.error(str(traceback.extract_tb(error_exception.__traceback__)))
 ##        packet_assembly = ''
           
     elif '.' == parse_sms[0][0:1]:
@@ -1134,7 +1134,7 @@ def csbk_gen2(to_id, from_id, tot_block):
     csbk_lst = []
     csbk_pk = 'BD0080'
     csbk_n = 0
-    csbk_tot = 2
+    csbk_tot = 1
     while csbk_n < csbk_tot:
         csbk_lst.append(csbk_pk)
         csbk_n = csbk_n + 1
@@ -2258,6 +2258,11 @@ if __name__ == '__main__':
         aprs_thread = threading.Thread(target=aprs_rx, args=(aprs_callsign, aprs_passcode, aprs_server, aprs_port, aprs_filter, user_ssid,))
         aprs_thread.daemon = True
         aprs_thread.start()
+    # Create folder so hbnet.py can access list PEER connections
+    if Path('/tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/')).exists():
+        pass
+    else:
+        Path('/tmp/' + (CONFIG['LOGGER']['LOG_NAME'] + '_PEERS/')).mkdir()
     reactor.run()
 
 # John 3:16 - For God so loved the world, that he gave his only Son,
