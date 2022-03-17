@@ -1395,14 +1395,14 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                             systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
                             sleep(pistar_overflow)
-                        logger.info('Sending on TS: ' + str(slot))
+                        logger.info('User in map. Sending on TS: ' + str(slot + 1))
                 elif CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['BOTH_SLOTS'] == True or CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][UNIT_MAP[bytes.fromhex(to_id)][0]]['ENABLED'] == True:
                         snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, snd_sms)
                         for d in snd_seq_lst:
                             systems[UNIT_MAP[bytes.fromhex(to_id)][0]].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
                             sleep(pistar_overflow)
-                        logger.info('Sending on TS: ' + str(slot))
+                        logger.info('User in map. Sending on TS: ' + str(slot + 1))
           # We don't know where the user is
             elif bytes.fromhex(to_id) not in UNIT_MAP:
                 for s in CONFIG['SYSTEMS']:
@@ -1413,14 +1413,14 @@ def send_sms(csbk, to_id, from_id, peer_id, call_type, msg, snd_slot = 1):
                             systems[s].send_system(d)
                           # Sleep to prevent overflowing of Pi-Star buffer
                             sleep(pistar_overflow)
-                        logger.info('User not in map. Sending on TS: ' + str(slot))
+                        logger.info('User not in map. Sending on TS: ' + str(slot + 1))
                     elif CONFIG['SYSTEMS'][s]['MODE'] == 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['BOTH_SLOTS'] == True and CONFIG['SYSTEMS'][s]['ENABLED'] == True or CONFIG['SYSTEMS'][s]['MODE'] != 'OPENBRIDGE' and CONFIG['SYSTEMS'][s]['ENABLED'] == True:
                         snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), call_type, snd_sms)
                         for d in snd_seq_lst:
                             systems[s].send_system(d)
                             # Sleep to prevent overflowing of Pi-Star buffer
                             sleep(pistar_overflow)
-                        logger.info('User not in map. Sending on TS: ' + str(slot))
+                        logger.info('User not in map. Sending on TS: ' + str(slot + 1))
         if ascii_call_type == 'group':
             snd_seq_lst = create_sms_seq(to_id, from_id, peer_id, int(slot), 0, snd_sms)
             for s in CONFIG['SYSTEMS']:
@@ -1890,7 +1890,6 @@ def data_received(self, _peer_id, _rf_src, _dst_id, _seq, _slot, _call_type, _fr
                             logger.info('\n\n' + 'Received SMS from ' + str(get_alias(int_id(_rf_src), subscriber_ids)) + ', DMR ID: ' + str(int_id(_rf_src)) + ': ' + str(msg_found) + '\n')
                            
                             if int_id(_dst_id) in data_id:
-                                print('process sms')
                                 process_sms(_rf_src, msg_found, _call_type, UNIT_MAP[_rf_src][0])
                             if int_id(_dst_id) not in data_id:
                                 dashboard_sms_write(str(get_alias(int_id(_rf_src), subscriber_ids)), str(get_alias(int_id(_dst_id), subscriber_ids)), int_id(_dst_id), int_id(_rf_src), msg_found, time(), UNIT_MAP[_rf_src][0])
@@ -2028,12 +2027,9 @@ class OBP(OPENBRIDGE):
 
     def svrd_received(self, _mode, _data):
         logger.debug('SVRD RCV')
-        print(_mode)
         if _mode == b'UNIT':
             UNIT_MAP[_data] = (self._system, time())
         if _mode == b'APRS':
-##            print(_data)
-##            print(self._system)
             peer_aprs[self._system] = ast.literal_eval(_data.decode('utf-8'))
             
         if _mode == b'DATA' or _mode == b'MDAT':
@@ -2140,7 +2136,8 @@ if __name__ == '__main__':
 
 
     if CONFIG['WEB_SERVICE']['REMOTE_CONFIG_ENABLED']:
-        CONFIG = download_config(CONFIG, cli_args.CONFIG_FILE)
+        if CONFIG['WEB_SERVICE']['DASHBOARD_ONLY'] == False:
+            CONFIG = download_config(CONFIG, cli_args.CONFIG_FILE)
 
     data_id_str = str('[' + CONFIG['DATA_CONFIG']['DATA_DMR_ID'] + ']')
     data_id = ast.literal_eval(data_id_str)

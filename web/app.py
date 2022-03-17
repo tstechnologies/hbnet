@@ -5084,6 +5084,11 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 <p style="text-align: center;">&nbsp;</p>
 '''
         else:
+            dash_only_data_gateway_link = ''
+            if mode == 'DASH_ONLY':
+                dash_only_data_gateway_link = '''
+<p style="text-align: center;"><a href="/unit/DATA_GATEWAY"><strong>DATA_GATEWAY Unit Table</strong></a></p>
+'''
             all_s = ServerList.query.all()
             pl = Misc.query.filter_by(field_1='ping_list').first()
             ping_list = ast.literal_eval(pl.field_2)
@@ -5095,6 +5100,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
 <tr>
 <td style="text-align: center;"><a href="manage_servers?add=new"><button type="button" class="btn btn-success">Add Server Config</button></a></td>
 </tr>
+
+''' + dash_only_data_gateway_link + '''
 </tbody>
 </table>
         <p>&nbsp;</p>
@@ -7295,7 +7302,8 @@ Name: <strong>''' + p.name + '''</strong>&nbsp; -&nbsp; Port: <strong>''' + str(
     def svr_endpoint():
         hblink_req = request.json
         print((hblink_req))
-        if hblink_req['secret'] in shared_secrets():
+        # 'd3967357e0b5788a03a1a61acefa72af8d2dbfe282d8718809f90fcc6f4aca41' = DATA_GATEWAY
+        if hblink_req['secret'] in shared_secrets() or hblink_req['secret'] == 'd3967357e0b5788a03a1a61acefa72af8d2dbfe282d8718809f90fcc6f4aca41' and mode == 'DASH_ONLY':
             try:
                 if hblink_req['ping']:
                     pl = Misc.query.filter_by(field_1='ping_list').first()
