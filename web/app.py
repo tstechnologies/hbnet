@@ -3122,12 +3122,15 @@ FLOOD_TIMEOUT = ''' + str(s.unit_time)
 
             else:
                 show_mailbox = True
-                mail_all = MailBox.query.filter_by(rcv_callsign=user.upper()).order_by(MailBox.time.desc()).all()
-                data_gateways = ServerList.query.filter(ServerList.other_options.ilike('%DATA_GATEWAY%')).all()
-                for i in data_gateways:
-                    gateway_o = gateway_o + '''  <option value="''' + i.name + '''">''' + i.name + '''</option>\n'''
+                if mode == 'DASH_ONLY':
+                    gateway_o = '<option value="DATA_GATEWAY">DATA_GATEWAY</option>'
+                else:
+                    data_gateways = ServerList.query.filter(ServerList.other_options.ilike('%DATA_GATEWAY%')).all()
+                    for i in data_gateways:
+                        gateway_o = gateway_o + '''  <option value="''' + i.name + '''">''' + i.name + '''</option>\n'''
                     
                 content = ''
+                mail_all = MailBox.query.filter_by(rcv_callsign=user.upper()).order_by(MailBox.time.desc()).all()
                 for i in mail_all:
                     content = content + '''
             <tr>
