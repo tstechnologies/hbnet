@@ -1291,11 +1291,13 @@ def format_sms(msg, to_id, from_id, call_type, use_header = True):
         # Anytone "DMR Standard decodes utf-15 LE, not BE. BE is specified in ETSI 361-3
         if sms_format_retrieve(to_id) == 'etsi_le':
             final = str(ahex(msg.encode('utf-16le')))[2:-1]
+            logger.debug('Sending in ETSI?(LE) format.')
         if sms_format_retrieve(to_id) == 'etsi_be':
             final = str(ahex(msg.encode('utf-16be')))[2:-1]
+            logger.debug('Sending in ETSI?(BE) format.')
         sms_header = '000d000a'
         ip_udp = IP(dst=dst_dmr_id, src=src_dmr_id, ttl=1, id=int(call_seq_num, 16))/UDP(sport=5016, dport=5016)/(bytes.fromhex(sms_header + final) + bytes.fromhex('00'))# + bytes.fromhex('0000000000000000000000'))
-        logger.debug('Sending in ETSI? format.')
+        
     elif sms_format_retrieve(to_id) == 'motorola':
         final = str(ahex(msg.encode('utf-16be')))[2:-1]
         # Unknown what byte is for, but it does correlate to the charaters : (number of characters + 4) * 2 . Convert to bytes.
