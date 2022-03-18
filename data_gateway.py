@@ -203,8 +203,9 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
     # Process received msg here
     def on_message(client, userdata, message):
         topic_list = str(message.topic).split('/')
-        print(topic_list)
+##        print(topic_list)
         dict_payload = json.loads(message.payload.decode())
+##        print(dict_payload)
         logger.debug(dict_payload)
         if len(topic_list) == 1:
             # Add service/network to dict of known services
@@ -218,13 +219,24 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
             elif topic_list[0] == 'ANNOUNCE':
                 if '*NO_SMS' in dict_payload['shortcut']:
                     logger.debug('Service discovered, NO_SMS flag, not adding to known services.')
+                elif dict_payload['shortcut'] == '':
+                    pass
                 else:
-                    logger.info('Service discovered: ' + dict_payload['shortcut'])
-                    logger.debug((dict_payload))
-                    mqtt_services[dict_payload['shortcut']] = dict_payload
-                    logger.debug('Known services: ')
-                    logger.debug(mqtt_services)
-                
+                    if '*NO_SMS' in mqtt_shortcut_gen:
+                        if dict_payload['type'] == 'network':
+                            logger.debug('NO_SMS flag, not adding other networks to known services')
+                        elif dict_payload['type'] == 'app':
+                            logger.info('Service discovered: ' + dict_payload['shortcut'])
+                            logger.debug((dict_payload))
+                            mqtt_services[dict_payload['shortcut']] = dict_payload
+                            logger.debug('Known services: ')
+                            logger.debug(mqtt_services)
+                    else:
+                        logger.info('Service discovered: ' + dict_payload['shortcut'])
+                        logger.debug((dict_payload))
+                        mqtt_services[dict_payload['shortcut']] = dict_payload
+                        logger.debug('Known services: ')
+                        logger.debug(mqtt_services) 
         elif len(topic_list) > 1:
             # Incoming MSG
             if topic_list[0] == 'ANNOUNCE' and topic_list[1] == 'MQTT':
@@ -233,14 +245,20 @@ def mqtt_main(mqtt_user, mqtt_pass, mqtt_user2, mqtt_pass2, broker_url = 'localh
                 logger.debug('Received MQTT server message.........................................................')
             elif topic_list[0] == 'MSG' and list(dict_payload.keys())[1] == 'network' and topic_list[1] == mqtt_shortcut_gen:
                 try:
-                    if mqtt_services[dict_payload['network']]['type'] == 'network':
-                        send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
-                    if mqtt_services[dict_payload['network']]['type'] == 'app':
-                        send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + ': ' + dict_payload[list(dict_payload.keys())[0]])
+                    if dict_payload['network'] in mqtt_services.keys():
+                        if mqtt_services[dict_payload['network']]['type'] == 'network':
+                            send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
+                        if mqtt_services[dict_payload['network']]['type'] == 'app':
+                            send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + ': ' + dict_payload[list(dict_payload.keys())[0]])
+                    else:
+                        logger.debug('Received incoming message from network/app that is not discovered yet, dropping.')
+                        pass
                 except Exception as e:
                     logger.error('Unable to determine if message from network or app, defaulting to network...')
                     logger.error(e)
                     send_sms(False, int(topic_list[2]), data_id[0], data_id[0], 'unit',  dict_payload['network'] + '/' + list(dict_payload.keys())[0] + ': ' + dict_payload[list(dict_payload.keys())[0]])
+##            else:
+                print(dict_payload)
             
     mqtt_client = mqtt.Client(client_id = mqtt_shortcut_gen + '-' + str(random.randint(1,99)))
     if broker_url2 != '':
